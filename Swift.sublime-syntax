@@ -1,0 +1,796 @@
+%YAML 1.2
+---
+# http://www.sublimetext.com/docs/syntax.html
+name: Swift
+file_extensions:
+  - swift
+  - swiftinterface
+first_line_match: '^#!.*\bswift\b'
+scope: source.swift
+version: 2
+
+variables:
+  ident_head: '[A-Za-z_]'
+  ident_char: '[A-Za-z0-9_]'
+  ident: '(?:{{ident_head}}{{ident_char}}*|`[^`\r\n]+`)'
+  type_ident: '[A-Z]{{ident_char}}*'
+  operator_char: '[+\-*/%=<>!&|^~.?]'
+
+contexts:
+  main:
+    - include: comments
+    - include: preprocessor
+    - include: attributes
+    - include: declarations
+    - include: statements
+    - include: expressions
+    - include: punctuation
+
+  # ============================================================================
+  # Comments (Line, Documentation, Nested Block, and Xcode MARK/TODO/FIXME)
+  # ============================================================================
+  comments:
+    # Documentation line comment: ///
+    - match: '///'
+      scope: punctuation.definition.comment.documentation.swift
+      push:
+        - meta_scope: comment.line.documentation.swift
+        - match: '\b(?:TODO|FIXME|NOTE|WARNING|IMPORTANT|MARK):?'
+          scope: keyword.other.documentation.label.swift
+        - match: '(?:-\s+)?\b(?:Parameter|Parameters|Returns|Throws|Precondition|Postcondition|Invariant|Complexity|Author|Authors|Copyright|Date|SeeAlso|Since|Version|Warning|Attention|Bug|Experiment|Note|Remark|Requires|Todo):'
+          scope: keyword.other.documentation.tag.swift
+        - match: '\r?\n'
+          pop: true
+
+    # Xcode-style section markers: // MARK: ..., // TODO: ..., // FIXME: ...
+    - match: '(//)\s*((?:MARK|TODO|FIXME):[^\r\n]*)'
+      scope: comment.line.double-slash.mark.swift
+      captures:
+        1: punctuation.definition.comment.swift
+        2: entity.name.section.mark.swift
+
+    # Standard single-line comment: //
+    - match: '//'
+      scope: punctuation.definition.comment.swift
+      push:
+        - meta_scope: comment.line.double-slash.swift
+        - match: '\b(?:TODO|FIXME|NOTE|HACK|XXX)\b:?'
+          scope: keyword.other.documentation.label.swift
+        - match: '\r?\n'
+          pop: true
+
+    # Empty block comment: /**/
+    - match: '/\*\*/'
+      scope: comment.block.empty.swift
+      captures:
+        0: punctuation.definition.comment.swift
+
+    # Documentation block comment: /** ... */ (supports nesting)
+    - match: '/\*\*(?!/)'
+      scope: punctuation.definition.comment.begin.documentation.swift
+      push: comment-block-doc
+
+    # Standard block comment: /* ... */ (supports nesting)
+    - match: '/\*'
+      scope: punctuation.definition.comment.begin.swift
+      push: comment-block
+
+  comment-block-doc:
+    - meta_scope: comment.block.documentation.swift
+    - match: '\*/'
+      scope: punctuation.definition.comment.end.documentation.swift
+      pop: true
+    - match: '/\*'
+      scope: punctuation.definition.comment.begin.swift
+      push: comment-block-nested
+    - match: '\b(?:TODO|FIXME|NOTE|WARNING|IMPORTANT|MARK):?'
+      scope: keyword.other.documentation.label.swift
+    - match: '(?:-\s+)?\b(?:Parameter|Parameters|Returns|Throws|Precondition|Postcondition|Invariant|Complexity|Author|Authors|Copyright|Date|SeeAlso|Since|Version|Warning|Attention|Bug|Experiment|Note|Remark|Requires|Todo):'
+      scope: keyword.other.documentation.tag.swift
+
+  comment-block:
+    - meta_scope: comment.block.swift
+    - match: '\*/'
+      scope: punctuation.definition.comment.end.swift
+      pop: true
+    - match: '/\*'
+      scope: punctuation.definition.comment.begin.swift
+      push: comment-block-nested
+    - match: '\b(?:TODO|FIXME|NOTE|HACK|XXX)\b:?'
+      scope: keyword.other.documentation.label.swift
+
+  comment-block-nested:
+    - match: '\*/'
+      scope: punctuation.definition.comment.end.swift
+      pop: true
+    - match: '/\*'
+      scope: punctuation.definition.comment.begin.swift
+      push: comment-block-nested
+
+  # ============================================================================
+  # Preprocessor / Compiler Control Directives
+  # ============================================================================
+  preprocessor:
+    - match: '^\s*(#(?:if|elseif))\b'
+      captures:
+        1: keyword.control.directive.conditional.swift
+      push:
+        - meta_scope: meta.preprocessor.conditional.swift
+        - include: comments
+        - match: '\b(?:os|arch|swift|compiler|canImport|targetEnvironment|_endian|_runtime|_ptrauth|hasAttribute|hasFeature)\b'
+          scope: support.function.directive.swift
+        - match: '\b(?:macOS|iOS|watchOS|tvOS|visionOS|Linux|Windows|Android|FreeBSD|OpenBSD|WASI|arm64|x86_64|arm|i386|wasm32|simulator|macCatalyst| true|false)\b'
+          scope: support.constant.directive.swift
+        - include: expressions
+        - match: '\r?\n'
+          pop: true
+
+    - match: '^\s*(#(?:else|endif))\b'
+      captures:
+        1: keyword.control.directive.conditional.swift
+
+    - match: '\b(#(?:available|unavailable))\b'
+      captures:
+        1: keyword.control.directive.available.swift
+
+    - match: '\b(#(?:warning|error|sourceLocation))\b'
+      captures:
+        1: keyword.control.directive.swift
+
+  # ============================================================================
+  # Attributes (@MainActor, @attached, @freestanding, @isolated(any), etc.)
+  # ============================================================================
+  attributes:
+    # Swift 6 @isolated(any)
+    - match: '(@)(isolated)\s*(\()\s*(any)\s*(\))'
+      scope: meta.annotation.isolated.swift
+      captures:
+        1: punctuation.definition.annotation.swift
+        2: variable.annotation.swift
+        3: punctuation.section.parens.begin.swift
+        4: storage.modifier.type.swift
+        5: punctuation.section.parens.end.swift
+
+    # Swift 5.9+ @freestanding(...) and @attached(...) macro attributes
+    - match: '(@)(freestanding|attached)\s*(\()'
+      captures:
+        1: punctuation.definition.annotation.swift
+        2: variable.annotation.macro.swift
+        3: punctuation.section.parens.begin.swift
+      push:
+        - meta_scope: meta.annotation.macro.swift
+        - match: '\)'
+          scope: punctuation.section.parens.end.swift
+          pop: true
+        - match: '\b(?:expression|declaration|member|peer|accessor|memberAttribute|extension|body|preamble|names|conformances|named|overloaded|arbitrary|prefixed|suffixed)\b'
+          scope: support.constant.attribute.macro.swift
+        - include: expressions
+        - include: punctuation
+
+    # General @Attribute with optional arguments
+    - match: '(@)({{ident}})'
+      scope: meta.annotation.swift
+      captures:
+        1: punctuation.definition.annotation.swift
+        2: variable.annotation.swift
+
+  # ============================================================================
+  # Declarations (Types, Functions, Macros, Imports, Properties, Modifiers)
+  # ============================================================================
+  declarations:
+    # Swift 6 SE-0409 Access-level import declarations
+    - match: '\b(?:(public|package|internal|fileprivate|private)\s+)?(import)\b(?:\s+(typealias|struct|class|enum|protocol|let|var|func)\b)?'
+      scope: meta.import.swift
+      captures:
+        1: storage.modifier.access-control.swift
+        2: keyword.control.import.swift
+        3: storage.type.swift
+
+    # Distributed actor declaration
+    - match: '\b(distributed)\s+(actor)\s+({{ident}})'
+      scope: meta.declaration.type.actor.distributed.swift
+      captures:
+        1: storage.modifier.concurrency.swift
+        2: storage.type.actor.swift
+        3: entity.name.type.actor.swift
+
+    # Actor declaration
+    - match: '\b(actor)\s+({{ident}})'
+      scope: meta.declaration.type.actor.swift
+      captures:
+        1: storage.type.actor.swift
+        2: entity.name.type.actor.swift
+
+    # Struct declaration
+    - match: '\b(struct)\s+({{ident}})'
+      scope: meta.declaration.type.struct.swift
+      captures:
+        1: storage.type.struct.swift
+        2: entity.name.type.struct.swift
+
+    # Class declaration (avoid matching 'class func' / 'class var' / 'class let' / 'class subscript')
+    - match: '\b(class)\s+(?!(?:func|var|let|subscript|override)\b)({{ident}})'
+      scope: meta.declaration.type.class.swift
+      captures:
+        1: storage.type.class.swift
+        2: entity.name.type.class.swift
+
+    # Enum declaration
+    - match: '\b(?:(indirect)\s+)?(enum)\s+({{ident}})'
+      scope: meta.declaration.type.enum.swift
+      captures:
+        1: storage.modifier.swift
+        2: storage.type.enum.swift
+        3: entity.name.type.enum.swift
+
+    # Protocol declaration
+    - match: '\b(protocol)\s+({{ident}})'
+      scope: meta.declaration.type.protocol.swift
+      captures:
+        1: storage.type.protocol.swift
+        2: entity.name.type.protocol.swift
+
+    # Extension declaration
+    - match: '\b(extension)\s+({{ident}}(?:\.{{ident}})*)'
+      scope: meta.declaration.type.extension.swift
+      captures:
+        1: storage.type.extension.swift
+        2: entity.name.type.extension.swift
+
+    # Typealias and associatedtype declarations
+    - match: '\b(typealias|associatedtype)\s+({{ident}})'
+      scope: meta.declaration.type.typealias.swift
+      captures:
+        1: storage.type.typealias.swift
+        2: entity.name.type.typealias.swift
+
+    # Swift 5.9+ Macro declaration: macro myMacro(...) = #externalMacro(...)
+    - match: '\b(macro)\s+({{ident}})'
+      scope: meta.declaration.macro.swift
+      captures:
+        1: storage.type.macro.swift
+        2: entity.name.function.macro.swift
+
+    # Function declaration (identifier or operator function)
+    - match: '\b(func)\s+({{ident}}|{{operator_char}}+)'
+      scope: meta.declaration.function.swift
+      captures:
+        1: storage.type.function.swift
+        2: entity.name.function.swift
+
+    # Initializer & Deinitializer & Subscript declarations
+    - match: '\b(init)(\?|!)?(?=\s*[<(])'
+      scope: meta.declaration.function.init.swift
+      captures:
+        1: storage.type.function.init.swift
+        2: keyword.operator.optional.swift
+
+    - match: '\b(deinit)\b'
+      scope: meta.declaration.function.deinit.swift
+      captures:
+        1: storage.type.function.deinit.swift
+
+    - match: '\b(subscript)(?=\s*[<(])'
+      scope: meta.declaration.function.subscript.swift
+      captures:
+        1: storage.type.function.subscript.swift
+
+    # Variable / Constant declarations
+    - match: '\b(let|var)\b'
+      scope: storage.type.property.swift
+
+    # Access Control Modifiers (including Swift 5.9+ 'package' and '...(set)')
+    - match: '\b(open|public|package|internal|fileprivate|private)\s*(\()\s*(set)\s*(\))'
+      captures:
+        1: storage.modifier.access-control.swift
+        2: punctuation.section.parens.begin.swift
+        3: keyword.other.accessor.swift
+        4: punctuation.section.parens.end.swift
+
+    - match: '\b(open|public|package|internal|fileprivate|private)\b'
+      scope: storage.modifier.access-control.swift
+
+    # Swift 5.10 / 6.x nonisolated(unsafe) & nonisolated(nonsending)
+    - match: '\b(nonisolated)\s*(\()\s*(unsafe|nonsending)\s*(\))'
+      captures:
+        1: storage.modifier.concurrency.swift
+        2: punctuation.section.parens.begin.swift
+        3: storage.modifier.concurrency.swift
+        4: punctuation.section.parens.end.swift
+
+    # Concurrency & Isolation modifiers (Swift 5.5 - 6.x)
+    - match: '\b(async|reasync)\b'
+      scope: storage.modifier.async.swift
+
+    - match: '\b(nonisolated|isolated|sending|distributed)\b'
+      scope: storage.modifier.concurrency.swift
+
+    # Ownership & Parameter Modifiers (Swift 5.9 - 6.x)
+    - match: '\b(borrowing|consuming|inout|mutating|nonmutating|yielding|__shared|__owned)\b'
+      scope: storage.modifier.ownership.swift
+
+    # Existential, Opaque, and Value Generic Type Modifiers
+    - match: '\b(some|any)\b'
+      scope: storage.modifier.type.swift
+
+    # Parameter Pack Modifiers (Swift 5.9+): 'each' and 'repeat' (when not followed by '{')
+    - match: '\b(each)\b'
+      scope: keyword.operator.pack.swift
+
+    - match: '\b(repeat)\b(?!\s*\{)'
+      scope: keyword.operator.pack.swift
+
+    # unowned(safe) / unowned(unsafe)
+    - match: '\b(unowned)\s*(\()\s*(safe|unsafe)\s*(\))'
+      captures:
+        1: storage.modifier.swift
+        2: punctuation.section.parens.begin.swift
+        3: storage.modifier.swift
+        4: punctuation.section.parens.end.swift
+
+    # General Declaration Modifiers
+    - match: '\b(static|class|final|override|required|convenience|lazy|weak|unowned|optional|dynamic|indirect|prefix|postfix|infix)\b'
+      scope: storage.modifier.swift
+
+    # Operator & Precedencegroup declarations
+    - match: '\b(operator|precedencegroup)\b'
+      scope: storage.type.operator.swift
+
+  # ============================================================================
+  # Statements & Control Flow (including Swift 6 Typed Throws & Suppressed ~Copyable)
+  # ============================================================================
+  statements:
+    # Swift 6 Typed Throws: throws(ErrorType)
+    - match: '\b(throws)\s*(\()'
+      captures:
+        1: keyword.control.exception.throws.swift
+        2: punctuation.section.parens.begin.swift
+      push:
+        - meta_scope: meta.throws.typed.swift
+        - match: '\)'
+          scope: punctuation.section.parens.end.swift
+          pop: true
+        - include: comments
+        - include: declarations
+        - include: types
+        - include: punctuation
+
+    # Untyped throws / rethrows
+    - match: '\b(throws|rethrows)\b'
+      scope: keyword.control.exception.throws.swift
+
+    # Swift 5.9 / 6.0 Suppressed Protocol Conformance: ~Copyable, ~Escapable, ~BitwiseCopyable
+    - match: '(~)\s*({{type_ident}})'
+      scope: meta.generic-constraint.suppressed.swift
+      captures:
+        1: keyword.operator.tilde.suppressed.swift
+        2: support.type.protocol.suppressed.swift
+
+    # Swift 5.9+ 'discard self' in noncopyable types
+    - match: '\b(discard)\s+(self)\b'
+      captures:
+        1: keyword.operator.word.ownership.swift
+        2: variable.language.swift
+
+    # Ownership operators: consume x, copy x
+    - match: '\b(consume|copy)\b(?=\s+{{ident}})'
+      scope: keyword.operator.word.ownership.swift
+
+    # Conditional keywords (if / switch expressions and statements, guard, case, default, where)
+    - match: '\b(if|else|guard|switch|case|default|where)\b'
+      scope: keyword.control.conditional.swift
+
+    # Loop keywords
+    - match: '\b(for|in|while|repeat|break|continue|fallthrough)\b'
+      scope: keyword.control.loop.swift
+
+    # Concurrency flow keyword: await
+    - match: '\b(await)\b'
+      scope: keyword.control.flow.await.swift
+
+    # Flow transfer keywords
+    - match: '\b(return|defer|yield|then)\b'
+      scope: keyword.control.flow.swift
+
+    # Error handling keywords: do, try?, try!, try, catch, throw
+    - match: '\b(try)(\?|!)'
+      captures:
+        1: keyword.control.exception.swift
+        2: keyword.operator.try.swift
+
+    - match: '\b(do|try|catch|throw)\b'
+      scope: keyword.control.exception.swift
+
+    # Accessor keywords inside property/subscript blocks
+    - match: '\b(get|set|willSet|didSet|_read|_modify|accesses|initializes)\b(?=\s*(?:[\({]|$|\r?\n|throws\b|async\b))'
+      scope: keyword.other.accessor.swift
+
+  # ============================================================================
+  # Expressions, Literals, Macros, Types, and Operators
+  # ============================================================================
+  expressions:
+    - include: literals
+    - include: pound-expressions
+    - include: types
+    - include: variables-and-calls
+    - include: operators
+
+  literals:
+    # Boolean & nil literals
+    - match: '\b(true|false)\b'
+      scope: constant.language.boolean.swift
+
+    - match: '\b(nil)\b'
+      scope: constant.language.nil.swift
+
+    # Raw multiline string literal: #""" ... """# (1, 2, or 3+ hashes)
+    - match: '(#)(""")'
+      captures:
+        1: punctuation.definition.string.begin.raw.swift
+        2: punctuation.definition.string.begin.swift
+      push:
+        - meta_scope: string.quoted.triple.raw.swift
+        - match: '(""")(#)'
+          captures:
+            1: punctuation.definition.string.end.swift
+            2: punctuation.definition.string.end.raw.swift
+          pop: true
+        - match: '(\\#\()'
+          captures:
+            1: punctuation.section.interpolation.begin.swift
+          push: interpolation-body
+        - match: '\\#[0\\tnr"''u]'
+          scope: constant.character.escape.swift
+
+    - match: '(##)(""")'
+      captures:
+        1: punctuation.definition.string.begin.raw.swift
+        2: punctuation.definition.string.begin.swift
+      push:
+        - meta_scope: string.quoted.triple.raw.swift
+        - match: '(""")(##)'
+          captures:
+            1: punctuation.definition.string.end.swift
+            2: punctuation.definition.string.end.raw.swift
+          pop: true
+        - match: '(\\##\()'
+          captures:
+            1: punctuation.section.interpolation.begin.swift
+          push: interpolation-body
+        - match: '\\##[0\\tnr"''u]'
+          scope: constant.character.escape.swift
+
+    - match: '(###+)(""")'
+      captures:
+        1: punctuation.definition.string.begin.raw.swift
+        2: punctuation.definition.string.begin.swift
+      push:
+        - meta_scope: string.quoted.triple.raw.swift
+        - match: '(""")(###+)'
+          captures:
+            1: punctuation.definition.string.end.swift
+            2: punctuation.definition.string.end.raw.swift
+          pop: true
+        - match: '(\\###+\()'
+          captures:
+            1: punctuation.section.interpolation.begin.swift
+          push: interpolation-body
+        - match: '\\###+[0\\tnr"''u]'
+          scope: constant.character.escape.swift
+
+    # Multiline string literal: """ ... """
+    - match: '"""'
+      scope: punctuation.definition.string.begin.swift
+      push:
+        - meta_scope: string.quoted.triple.swift
+        - match: '"""'
+          scope: punctuation.definition.string.end.swift
+          pop: true
+        - include: string-escaped-and-interpolated
+
+    # Raw single-line string literal: #" ... "# (1, 2, or 3+ hashes)
+    - match: '(#)(")'
+      captures:
+        1: punctuation.definition.string.begin.raw.swift
+        2: punctuation.definition.string.begin.swift
+      push:
+        - meta_scope: string.quoted.double.raw.swift
+        - match: '(")(#)'
+          captures:
+            1: punctuation.definition.string.end.swift
+            2: punctuation.definition.string.end.raw.swift
+          pop: true
+        - match: '(\\#\()'
+          captures:
+            1: punctuation.section.interpolation.begin.swift
+          push: interpolation-body
+        - match: '\\#[0\\tnr"''u]'
+          scope: constant.character.escape.swift
+        - match: '\r?\n'
+          scope: invalid.illegal.unclosed-string.swift
+          pop: true
+
+    - match: '(##)(")'
+      captures:
+        1: punctuation.definition.string.begin.raw.swift
+        2: punctuation.definition.string.begin.swift
+      push:
+        - meta_scope: string.quoted.double.raw.swift
+        - match: '(")(##)'
+          captures:
+            1: punctuation.definition.string.end.swift
+            2: punctuation.definition.string.end.raw.swift
+          pop: true
+        - match: '(\\##\()'
+          captures:
+            1: punctuation.section.interpolation.begin.swift
+          push: interpolation-body
+        - match: '\\##[0\\tnr"''u]'
+          scope: constant.character.escape.swift
+        - match: '\r?\n'
+          scope: invalid.illegal.unclosed-string.swift
+          pop: true
+
+    - match: '(###+)(")'
+      captures:
+        1: punctuation.definition.string.begin.raw.swift
+        2: punctuation.definition.string.begin.swift
+      push:
+        - meta_scope: string.quoted.double.raw.swift
+        - match: '(")(###+)'
+          captures:
+            1: punctuation.definition.string.end.swift
+            2: punctuation.definition.string.end.raw.swift
+          pop: true
+        - match: '(\\###+\()'
+          captures:
+            1: punctuation.section.interpolation.begin.swift
+          push: interpolation-body
+        - match: '\\###+[0\\tnr"''u]'
+          scope: constant.character.escape.swift
+        - match: '\r?\n'
+          scope: invalid.illegal.unclosed-string.swift
+          pop: true
+
+    # Standard single-line string literal: "..."
+    - match: '"'
+      scope: punctuation.definition.string.begin.swift
+      push:
+        - meta_scope: string.quoted.double.swift
+        - match: '"'
+          scope: punctuation.definition.string.end.swift
+          pop: true
+        - include: string-escaped-and-interpolated
+        - match: '\r?\n'
+          scope: invalid.illegal.unclosed-string.swift
+          pop: true
+
+    # Swift 5.7+ Extended Regex Literal: #/.../# (1 or 2+ hashes, single-line or multiline)
+    - match: '(#)(/)'
+      captures:
+        1: punctuation.definition.string.begin.raw.swift
+        2: punctuation.definition.string.begin.regexp.swift
+      push:
+        - meta_scope: string.regexp.extended.swift
+        - match: '(/)(#)'
+          captures:
+            1: punctuation.definition.string.end.regexp.swift
+            2: punctuation.definition.string.end.raw.swift
+          pop: true
+        - match: '\\.'
+          scope: constant.character.escape.regexp.swift
+        - match: '(?<!\\)#[^\r\n]*'
+          scope: comment.line.number-sign.regexp.swift
+
+    - match: '(##+)(/)'
+      captures:
+        1: punctuation.definition.string.begin.raw.swift
+        2: punctuation.definition.string.begin.regexp.swift
+      push:
+        - meta_scope: string.regexp.extended.swift
+        - match: '(/)(##+)'
+          captures:
+            1: punctuation.definition.string.end.regexp.swift
+            2: punctuation.definition.string.end.raw.swift
+          pop: true
+        - match: '\\.'
+          scope: constant.character.escape.regexp.swift
+        - match: '(?<!\\)#[^\r\n]*'
+          scope: comment.line.number-sign.regexp.swift
+
+    # Swift 5.7+ Standard Regex Literal: /.../ (single-line, lookahead-verified)
+    - match: '(?:(?<=^)|(?<=[(,=\[:;?!~]))\s*(/)(?![/*=\s])((?:[^/\r\n\\]|\\.)+)(?<!\s)(/)(?![/*])'
+      captures:
+        1: punctuation.definition.string.begin.regexp.swift
+        2: string.regexp.swift
+        3: punctuation.definition.string.end.regexp.swift
+
+    # Numeric Literals
+    # Binary: 0b1010_0001
+    - match: '\b0b[01][01_]*\b'
+      scope: constant.numeric.integer.binary.swift
+
+    # Octal: 0o755
+    - match: '\b0o[0-7][0-7_]*\b'
+      scope: constant.numeric.integer.octal.swift
+
+    # Hexadecimal floating-point: 0x1.fp-2
+    - match: '\b0x[0-9a-fA-F][0-9a-fA-F_]*(?:\.[0-9a-fA-F][0-9a-fA-F_]*)?[pP][+-]?[0-9][0-9_]*\b'
+      scope: constant.numeric.float.hexadecimal.swift
+
+    # Hexadecimal integer: 0xFF_00
+    - match: '\b0x[0-9a-fA-F][0-9a-fA-F_]*\b'
+      scope: constant.numeric.integer.hexadecimal.swift
+
+    # Decimal floating-point: 3.14159, 1.0e-5
+    - match: '\b[0-9][0-9_]*(?:\.[0-9][0-9_]*(?:[eE][+-]?[0-9][0-9_]*)?|[eE][+-]?[0-9][0-9_]*)\b'
+      scope: constant.numeric.float.decimal.swift
+
+    # Decimal integer: 42, 1_000_000
+    - match: '\b[0-9][0-9_]*\b'
+      scope: constant.numeric.integer.decimal.swift
+
+  string-escaped-and-interpolated:
+    - match: '\\\('
+      scope: punctuation.section.interpolation.begin.swift
+      push: interpolation-body
+    - match: '\\(?:[0\\tnr"''\n]|u\{[0-9a-fA-F]{1,8}\})'
+      scope: constant.character.escape.swift
+
+  interpolation-body:
+    - meta_scope: meta.interpolation.swift
+    - match: '\)'
+      scope: punctuation.section.interpolation.end.swift
+      pop: true
+    - match: '\('
+      scope: punctuation.section.parens.begin.swift
+      push: interpolation-nested-parens
+    - include: main
+
+  interpolation-nested-parens:
+    - match: '\)'
+      scope: punctuation.section.parens.end.swift
+      pop: true
+    - match: '\('
+      scope: punctuation.section.parens.begin.swift
+      push: interpolation-nested-parens
+    - include: main
+
+  # ============================================================================
+  # Pound Expressions & Macros (#isolation, #expect, #Preview, #externalMacro)
+  # ============================================================================
+  pound-expressions:
+    # Swift 6 SE-0420 #isolation expression
+    - match: '(#isolation)\b'
+      scope: variable.language.isolation.swift
+
+    # Magic compiler literals
+    - match: '(#(?:file|fileID|filePath|line|column|function|dsohandle))\b'
+      scope: constant.language.magic.swift
+
+    # Built-in pound expressions
+    - match: '(#(?:selector|keyPath|externalMacro|colorLiteral|fileLiteral|imageLiteral|unsafe))\b'
+      scope: support.function.magic.swift
+
+    # Swift 5.9 / 6.0 Freestanding Macro Expansion (#expect, #require, #Preview, #Predicate, or custom #myMacro)
+    - match: '(#)({{ident}})'
+      scope: meta.macro.expansion.swift
+      captures:
+        1: punctuation.definition.macro.swift
+        2: support.function.macro.swift
+
+  # ============================================================================
+  # Types (Standard Library, Concurrency, Swift 6 Primitives & User Types)
+  # ============================================================================
+  types:
+    # Built-in Standard Library, Concurrency, Observation, and Synchronization types
+    - match: '\b(?:Int|Int8|Int16|Int32|Int64|Int128|UInt|UInt8|UInt16|UInt32|UInt64|UInt128|Float|Float16|Float32|Float64|Float80|Double|Bool|String|Substring|Character|UnicodeScalar|StaticString|Array|InlineArray|Span|RawSpan|MutableSpan|Dictionary|Set|Optional|Result|Range|ClosedRange|PartialRangeFrom|PartialRangeThrough|PartialRangeUpTo|Error|Never|Void|Any|AnyObject|AnyClass|AnyHashable|AnyKeyPath|PartialKeyPath|KeyPath|WritableKeyPath|ReferenceWritableKeyPath|Sendable|SendableMetatype|Copyable|Escapable|BitwiseCopyable|Equatable|Hashable|Comparable|Codable|Encodable|Decodable|Identifiable|CustomStringConvertible|CustomDebugStringConvertible|Sequence|Collection|BidirectionalCollection|RandomAccessCollection|RangeReplaceableCollection|IteratorProtocol|AsyncSequence|AsyncIteratorProtocol|AsyncStream|AsyncThrowingStream|Task|TaskGroup|ThrowingTaskGroup|DiscardingTaskGroup|ThrowingDiscardingTaskGroup|MainActor|GlobalActor|Actor|DistributedActor|ContinuousClock|SuspendingClock|Duration|Instant|CheckedContinuation|UnsafeContinuation|UnsafePointer|UnsafeMutablePointer|UnsafeRawPointer|UnsafeMutableRawPointer|UnsafeBufferPointer|UnsafeMutableBufferPointer|AutoreleasingUnsafeMutablePointer|Unmanaged|ObservationRegistrar|Mutex|Atomic)\b'
+      scope: support.type.swift
+
+    # General UpperCamelCase Type Identifier
+    - match: '\b{{type_ident}}\b'
+      scope: support.type.user-defined.swift
+
+  # ============================================================================
+  # Variables, Language Identifiers, and Function Calls
+  # ============================================================================
+  variables-and-calls:
+    # Language variables
+    - match: '\b(self|Self|super)\b'
+      scope: variable.language.swift
+
+    # Wildcard pattern _
+    - match: '\b_\b'
+      scope: language.variable.wildcard.swift
+
+    # Anonymous closure parameters: $0, $1, ...
+    - match: '\$[0-9]+\b'
+      scope: variable.language.anonymous.swift
+
+    # Property wrapper projected value: $property
+    - match: '\${{ident_head}}{{ident_char}}*'
+      scope: variable.other.projected.swift
+
+    # Built-in global functions
+    - match: '\b(print|debugPrint|dump|fatalError|precondition|preconditionFailure|assert|assertionFailure|abs|min|max|zip|stride|sequence| repeatElement|swap|withUnsafePointer|withUnsafeMutablePointer|withUnsafeBytes|withUnsafeMutableBytes|withCheckedContinuation|withCheckedThrowingContinuation|withUnsafeContinuation|withUnsafeThrowingContinuation|withTaskGroup|withThrowingTaskGroup|withDiscardingTaskGroup|withThrowingDiscardingTaskGroup|withTaskCancellationHandler|unsafeBitCast|unsafeDowncast|numericCast|type)\b(?=\s*\()'
+      scope: support.function.builtin.swift
+
+    # General function or method call: foo(...)
+    - match: '\b({{ident_head}}{{ident_char}}*)(?=\s*\()'
+      captures:
+        1: variable.function.swift
+
+  # ============================================================================
+  # Operators & Punctuation
+  # ============================================================================
+  operators:
+    # Type casting operators: is, as, as?, as!
+    - match: '\b(as)(\?|!)'
+      captures:
+        1: keyword.operator.word.cast.swift
+        2: keyword.operator.optional.swift
+
+    - match: '\b(is|as)\b'
+      scope: keyword.operator.word.cast.swift
+
+    # Return arrow ->
+    - match: '->'
+      scope: punctuation.separator.return-type.swift
+
+    # Range operators: ..., ..<
+    - match: '\.\.\.|\.\.<'
+      scope: keyword.operator.range.swift
+
+    # Nil-coalescing operator: ??
+    - match: '\?\?'
+      scope: keyword.operator.nil-coalescing.swift
+
+    # Logical operators: &&, ||, !
+    - match: '&&|\|\||!'
+      scope: keyword.operator.logical.swift
+
+    # Comparison operators: ===, !==, ==, !=, <=, >=, <, >
+    - match: '===|!==|==|!=|<=|>='
+      scope: keyword.operator.comparison.swift
+
+    # Compound assignment operators
+    - match: '(?:\+=|-=|\*=|/=|%=|&=|\|=|\^=|<<=|>>=|&+=|&-=|&\*=)'
+      scope: keyword.operator.assignment.compound.swift
+
+    # Assignment operator: =
+    - match: '='
+      scope: keyword.operator.assignment.swift
+
+    # Overflow & arithmetic operators
+    - match: '&[+\-*]|[+\-*/%]'
+      scope: keyword.operator.arithmetic.swift
+
+    # Bitwise & protocol composition (&) operators
+    - match: '<<|>>|[&|^~]'
+      scope: keyword.operator.bitwise.swift
+
+    # Optional / Ternary ?
+    - match: '\?'
+      scope: keyword.operator.optional.swift
+
+  punctuation:
+    - match: '\{'
+      scope: punctuation.section.block.begin.swift
+    - match: '\}'
+      scope: punctuation.section.block.end.swift
+    - match: '\('
+      scope: punctuation.section.parens.begin.swift
+    - match: '\)'
+      scope: punctuation.section.parens.end.swift
+    - match: '\['
+      scope: punctuation.section.brackets.begin.swift
+    - match: '\]'
+      scope: punctuation.section.brackets.end.swift
+    - match: ','
+      scope: punctuation.separator.comma.swift
+    - match: ':'
+      scope: punctuation.separator.colon.swift
+    - match: ';'
+      scope: punctuation.terminator.statement.swift
+    - match: '\.'
+      scope: punctuation.accessor.dot.swift

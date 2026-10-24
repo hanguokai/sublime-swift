@@ -1,0 +1,12 @@
+# macOS
+.DS_Store
+
+# Sublime Text cache and workspace files
+*.tmlanguage.cache
+*.tmPreferences.cache
+*.stTheme.cache
+*.sublime-workspace
+*.sublime-project
+
+# Built package archives
+*.sublime-package
