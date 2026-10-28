@@ -6,7 +6,7 @@ Built from scratch using Sublime Text 4's `version: 2` `.sublime-syntax` engine 
 
 ---
 
-## Features / 核心特性
+## Features
 
 - **Modern Swift 6 Syntax Highlighting**:
   - **Concurrency & Isolation**: `async`, `await`, `actor`, `distributed actor`, `sending`, `isolated`, `nonisolated`, `nonisolated(unsafe)`, `nonisolated(nonsending)`, `#isolation`, `@isolated(any)`, `@MainActor`, `@Sendable`, `Sendable`, `SendableMetatype`
@@ -25,7 +25,7 @@ Built from scratch using Sublime Text 4's `version: 2` `.sublime-syntax` engine 
 
 ---
 
-## Installation / 安装方式
+## Installation
 
 ### Via Package Control (Recommended)
 
@@ -42,7 +42,7 @@ chmod +x scripts/install_macos.sh
 
 ---
 
-## Syntax Tests / 语法测试
+## Syntax Tests
 
 1. Open [`tests/syntax_test_swift.swift`](tests/syntax_test_swift.swift) in Sublime Text 4.
 2. Open Command Palette (`Cmd+Shift+P`) and run **`Build With: Syntax Tests`**.
