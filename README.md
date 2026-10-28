@@ -12,9 +12,9 @@ Built from scratch using Sublime Text 4's `version: 2` `.sublime-syntax` engine 
   - **Concurrency & Isolation**: `async`, `await`, `actor`, `distributed actor`, `sending`, `isolated`, `nonisolated`, `nonisolated(unsafe)`, `nonisolated(nonsending)`, `#isolation`, `@isolated(any)`, `@MainActor`, `@Sendable`, `Sendable`, `SendableMetatype`
   - **Macros**: `macro` declarations, `@freestanding(expression/declaration)`, `@attached(member/peer/accessor/memberAttribute/extension)`, `#externalMacro`, and freestanding macro expansions (`#expect`, `#require`, `#Preview`, `#Predicate`, etc.)
   - **Typed Throws**: `throws(ErrorType)`, `rethrows`
-  - **Ownership & Noncopyable Types**: `~Copyable`, `~Escapable`, `~BitwiseCopyable`, `borrowing`, `consuming`, `consume`, `copy`, `discard self`, `yielding`
-  - **Parameter Packs (Variadic Generics)**: `each T`, `repeat each value`
-  - **Access Control & Modules**: `package` access level, Swift 6 access-level imports (`public import`, `package import`, `private import`, etc.), `@retroactive`
+  - **Ownership, Noncopyable Types & Accessors**: `~Copyable`, `~Escapable`, `~BitwiseCopyable`, `borrowing`, `consuming`, `consume`, `copy`, `discard self`, `unsafe`, `borrow` / `mutate` accessors, `yielding` (experimental coroutine accessors)
+  - **Parameter Packs & InlineArray**: `each T`, `repeat each value`, `[N of Element]` (`InlineArray` sugar)
+  - **Access Control & Modules**: `package` access level, Swift 6 access-level imports (`public import`, `package import`, `private import`, etc.), `Module::symbol` module selectors, `@retroactive`
   - **Literals & Comments**: Native regex literals `/.../`, extended multiline regex literals `#/.../#`, raw strings `#"..."#` & interpolations `\#(...)`, multiline strings `"""..."""`, nested block comments `/* /* ... */ */`, and documentation comments `///` / `/** */`
 - **Editor Integration**:
   - **Comments (`Comments.tmPreferences`)**: Toggle single-line (`Cmd+/`) and block (`Cmd+Opt+/`) comments

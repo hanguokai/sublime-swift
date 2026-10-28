@@ -5,7 +5,7 @@
 	<key>name</key>
 	<string>Symbol List - Marks</string>
 	<key>scope</key>
-	<string>source.swift entity.name.section.mark.swift</string>
+	<string>source.swift entity.name.section.mark.swift, source.swift entity.name.type.extension, source.swift storage.type.function.init, source.swift storage.type.function.deinit, source.swift storage.type.function.subscript</string>
 	<key>settings</key>
 	<dict>
 		<key>showInSymbolList</key>

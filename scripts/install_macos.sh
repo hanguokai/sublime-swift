@@ -21,8 +21,10 @@ if [[ -L "$TARGET_LINK" ]]; then
         rm "$TARGET_LINK"
     fi
 elif [[ -e "$TARGET_LINK" ]]; then
-    BACKUP_PATH="${TARGET_LINK}.backup.$(date +%Y%m%d%H%M%S)"
-    echo "Existing directory found, backing up to: $BACKUP_PATH"
+    BACKUP_DIR="$HOME/Library/Application Support/Sublime Text/Packages-Backup"
+    mkdir -p "$BACKUP_DIR"
+    BACKUP_PATH="$BACKUP_DIR/Swift.backup.$(date +%Y%m%d%H%M%S)"
+    echo "Existing directory found, backing up outside Packages/ to: $BACKUP_PATH"
     mv "$TARGET_LINK" "$BACKUP_PATH"
 fi
 

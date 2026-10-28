@@ -5,7 +5,7 @@
 	<key>name</key>
 	<string>Symbol List</string>
 	<key>scope</key>
-	<string>source.swift entity.name.type, source.swift entity.name.function, source.swift storage.type.function.init, source.swift storage.type.function.deinit, source.swift storage.type.function.subscript</string>
+	<string>source.swift entity.name.type - entity.name.type.extension, source.swift entity.name.function</string>
 	<key>settings</key>
 	<dict>
 		<key>showInSymbolList</key>

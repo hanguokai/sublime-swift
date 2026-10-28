@@ -39,7 +39,7 @@
 ├── Symbol List.tmPreferences          # 符号索引：支持 Cmd+R / Cmd+Shift+R 跳转类型、函数、macro 等
 ├── Symbol List - Marks.tmPreferences  # MARK 导航：在 Cmd+R 中将 // MARK: - xxx 转换为分隔标题
 ├── tests/
-│   └── syntax_test_swift.swift        # 官方格式的自动化语法高亮 Scope 断言测试套件（113 项断言）
+│   └── syntax_test_swift.swift        # 官方格式的自动化语法高亮 Scope 断言测试套件（约 390 行断言，语法文件中出现的每个 Scope 名至少被一条断言引用）
 ├── scripts/
 │   └── install_macos.sh               # 本机 macOS Sublime Text 软链接安装脚本
 ├── doc/
@@ -61,8 +61,8 @@
 | **并发与隔离** | `async`, `reasync`, `await`, `actor`, `distributed actor`, `sending`, `isolated`, `nonisolated`, `nonisolated(unsafe)`, `nonisolated(nonsending)`, `#isolation`, `@isolated(any)`, `@MainActor`, `@Sendable`, `Sendable`, `SendableMetatype` | `storage.modifier.async.swift`, `storage.modifier.concurrency.swift`, `storage.type.actor.swift`, `keyword.control.flow.await.swift`, `variable.language.isolation.swift` |
 | **宏系统 (Macros)** | `macro` 声明、`@freestanding(...)`、`@attached(...)`（支持嵌套括号参数如 `names: named(init)`）、`#externalMacro`、编译期宏展开（`#expect`, `#require`, `#Preview`, `#Predicate` 及带模块前缀的 `#Module.macro(...)`） | `storage.type.macro.swift`, `entity.name.function.macro.swift`, `variable.annotation.macro.swift`, `support.function.macro.swift` |
 | **错误处理** | Swift 6 类型化抛出 `throws(ErrorType)`、普通 `throws` / `rethrows`、`do` / `try` / `try?` / `try!` / `catch` / `throw` | `keyword.control.exception.throws.swift`, `meta.throws.typed.swift`, `keyword.control.exception.swift` |
-| **所有权与访问器** | `~Copyable`, `~Escapable`, `~BitwiseCopyable`, `borrowing`, `consuming`, `inout`, `yielding`, `consume`, `copy`, `discard self`, `unsafe` 表达式运算符，以及 Swift 6.4 `borrow` / `mutate` 访问器 | `meta.generic-constraint.suppressed.swift`, `storage.modifier.ownership.swift`, `keyword.operator.word.ownership.swift`, `keyword.operator.word.unsafe.swift`, `keyword.other.accessor.swift` |
-| **泛型与参数包** | `some Protocol`, `any Protocol`, 参数包 `each T` 与 `repeat each x`（已与 `repeat { ... } while` 循环和 `for each in ...` 区分） | `storage.modifier.type.swift`, `keyword.operator.pack.swift` |
+| **所有权与访问器** | `~Copyable`, `~Escapable`, `~BitwiseCopyable`, `borrowing`, `consuming`, `inout`, `yielding`（实验性协程访问器）, `consume`, `copy`, `discard self`, `unsafe` 表达式运算符，以及 Swift 6.4 `borrow` / `mutate` 访问器 | `meta.generic-constraint.suppressed.swift`, `storage.modifier.ownership.swift`, `keyword.operator.word.ownership.swift`, `keyword.operator.word.unsafe.swift`, `keyword.other.accessor.swift` |
+| **泛型与参数包** | `some Protocol`, `any Protocol`, `[N of Element]` (`InlineArray` 类型糖), 参数包 `each T` 与 `repeat each x`（已与 `repeat { ... } while` 循环和 `for each in ...` 区分） | `storage.modifier.type.swift`, `keyword.operator.word.swift`, `keyword.operator.pack.swift` |
 | **访问控制与模块** | `open`, `public`, `package`, `internal`, `fileprivate`, `private`（含 `...(set)` 形式）、Swift 6 访问级别导入 `public/package/... import`，以及 Swift 6.4 模块选择器 `Module::symbol` | `storage.modifier.access-control.swift`, `keyword.control.import.swift`, `punctuation.accessor.module.swift` |
 | **字面量与正则** | 二进制 `0b` / 八进制 `0o` / 十六进制 `0x` / 十进制浮点与整数、单行/多行字符串 `"""..."""`、原始字符串 `#"..."#` 及插值 `\#(...)`、单行正则 `/.../`、扩展多行正则 `#/.../#` | `constant.numeric.*.swift`, `string.quoted.*.swift`, `meta.interpolation.swift`, `string.regexp.*.swift` |
 | **注释与导航标签** | 单行注释 `//`、文档注释 `///` 与 `/** ... */`、支持多层嵌套的块注释 `/* /* ... */ */`、Xcode 风格 `// MARK: -` / `TODO:` / `FIXME:` | `comment.*.swift`, `entity.name.section.mark.swift` |
@@ -97,8 +97,10 @@
 - **案例**：在解析宏属性 `@attached(member, names: named(init), arbitrary)` 时，如果 `@attached(` 推入的上下文只定义了遇到 `\)` 就 `pop: true`，那么内部 `named(init)` 的右括号 `)` 会把外层 `@attached(` 的上下文提前弹出，导致后面的 `, arbitrary)` 丢失高亮（此问题由 GitHub Actions CI 精准捕获）。
 - **准则**：凡是以 `\(` 开始并依靠 `\)` 弹出的上下文（如 `macro-attribute-args`、`interpolation-body`），内部**必须**包含一条遇到 `\(` 递归 `push` 自身或嵌套括号上下文的规则，确保括号层级成对抵消。
 
-### 4. `.sublime-syntax` 不支持跨 `push` 引用父级捕获组 `\1`
-- 区别于旧版 TextMate `.tmLanguage` 的 `begin`/`end` 规则，Sublime Text 的 `push` 子上下文中写的正则与父级 `match` 是独立编译的（除非使用特殊的 `embed`/`escape` 机制）。因此对于 `#"..."#`、`##"..."##` 等可变数量 `#` 的原始字符串，采用显式分支上下文最为直观可靠。
+### 4. 原始字符串使用显式分支，而不是 `\1` 反向引用
+- `.sublime-syntax` 允许在 `push` 出来的子上下文中用 `\1` 引用触发 `push` 的那条 `match` 的捕获组（内置 Rust、Lua 语法都用它处理 `r#"..."#`、`[==[ ... ]==]`）。
+- 但反向引用是否会让规则退回 Oniguruma 引擎，目前**没有在本项目中实测过**。为了稳妥起见，`#"..."#`、`##"..."##`、`###+"..."###+` 仍按 `#` 的数量写成显式分支。
+- 以后如果想改用 `\1` 合并这些分支，请先打开 `Swift.sublime-syntax`，运行 **`Build With: Syntax Tests - Regex Compatibility`**。输出 `Success: all patterns ... are compatible with the new regex engine` 才说明没有回退。
 
 ---
 
