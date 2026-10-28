@@ -157,15 +157,7 @@ contexts:
         1: punctuation.definition.annotation.swift
         2: variable.annotation.macro.swift
         3: punctuation.section.parens.begin.swift
-      push:
-        - meta_scope: meta.annotation.macro.swift
-        - match: '\)'
-          scope: punctuation.section.parens.end.swift
-          pop: true
-        - match: '\b(?:expression|declaration|member|peer|accessor|memberAttribute|extension|body|preamble|names|conformances|named|overloaded|arbitrary|prefixed|suffixed)\b'
-          scope: support.constant.attribute.macro.swift
-        - include: expressions
-        - include: punctuation
+      push: macro-attribute-args
 
     # General @Attribute with optional arguments
     - match: '(@)({{ident}})'
@@ -173,6 +165,19 @@ contexts:
       captures:
         1: punctuation.definition.annotation.swift
         2: variable.annotation.swift
+
+  macro-attribute-args:
+    - meta_scope: meta.annotation.macro.swift
+    - match: '\)'
+      scope: punctuation.section.parens.end.swift
+      pop: true
+    - match: '\('
+      scope: punctuation.section.parens.begin.swift
+      push: macro-attribute-args
+    - match: '\b(?:expression|declaration|member|peer|accessor|memberAttribute|extension|body|preamble|names|conformances|named|overloaded|arbitrary|prefixed|suffixed)\b'
+      scope: support.constant.attribute.macro.swift
+    - include: expressions
+    - include: punctuation
 
   # ============================================================================
   # Declarations (Types, Functions, Macros, Imports, Properties, Modifiers)
