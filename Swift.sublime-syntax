@@ -579,7 +579,7 @@ contexts:
           pop: true
         - match: '\\.'
           scope: constant.character.escape.regexp.swift
-        - match: '(?<!\\)#[^\r\n]*'
+        - match: '#[^\r\n]*'
           scope: comment.line.number-sign.regexp.swift
 
     - match: '(##+)(/)'
@@ -595,11 +595,11 @@ contexts:
           pop: true
         - match: '\\.'
           scope: constant.character.escape.regexp.swift
-        - match: '(?<!\\)#[^\r\n]*'
+        - match: '#[^\r\n]*'
           scope: comment.line.number-sign.regexp.swift
 
-    # Swift 5.7+ Standard Regex Literal: /.../ (single-line, lookahead-verified)
-    - match: '(?:(?<=^)|(?<=[(,=\[:;?!~]))\s*(/)(?![/*=\s])((?:[^/\r\n\\]|\\.)+)(?<!\s)(/)(?![/*])'
+    # Swift 5.7+ Standard Regex Literal: /.../ (SE-0354 single-line, sregex-compatible without lookbehinds)
+    - match: '(/)(?![/*=])((?:[^/\r\n\\\s]|\\.)(?:(?:[^/\r\n\\]|\\.)*(?:[^/\r\n\\\s]|\\.))?)(/)(?![/*])'
       captures:
         1: punctuation.definition.string.begin.regexp.swift
         2: string.regexp.swift
