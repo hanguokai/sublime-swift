@@ -12,10 +12,10 @@ version: 2
 variables:
   ident_head: '[[:alpha:]_]'
   ident_char: '[[:alnum:]_]'
-  ident: '(?:{{ident_head}}{{ident_char}}*|`[^`\r\n]+`)'
+  ident: '(?:{{ident_head}}{{ident_char}}*|`[^`\\\r\n]+`)'
   type_ident: '[A-Z]{{ident_char}}*'
   operator_char: '[+\-*/%=<>!&|^~.?]'
-  decl_follow: '\s+(?:@{{ident_head}}{{ident_char}}*(?:\([^)]*\))?\s+|(?:(?:open|public|package|internal|fileprivate|private)(?:\s*\(\s*set\s*\))?|final|static|class|distributed|nonisolated(?:\([^)]*\))?|indirect|convenience|required|override|mutating|nonmutating|borrowing|consuming|optional|dynamic|lazy|weak|unowned(?:\([^)]*\))?|prefix|postfix|infix)\s+)*(?:import|let|var|func|macro|struct|class|enum|case|actor|protocol|extension|typealias|associatedtype|init|deinit|subscript|operator|precedencegroup)\b'
+  decl_follow: '\s+(?:@{{ident_head}}{{ident_char}}*(?:\((?:[^()]|\([^)]*\))*\))?\s+|(?:(?:open|public|package|internal|fileprivate|private)(?:\s*\(\s*set\s*\))?|final|static|class|distributed|isolated|nonisolated(?:\([^)]*\))?|indirect|convenience|required|override|mutating|nonmutating|borrowing|consuming|optional|dynamic|lazy|weak|unowned(?:\([^)]*\))?|prefix|postfix|infix)\s+)*(?:import|let|var|func|macro|struct|class|enum|case|actor|protocol|extension|typealias|associatedtype|init|deinit|subscript|operator|precedencegroup)\b'
 
 contexts:
   main:
@@ -122,15 +122,24 @@ contexts:
         - include: comments
         - match: '\b(?:os|arch|swift|compiler|canImport|targetEnvironment|_endian|_runtime|_ptrauth|hasAttribute|hasFeature)\b'
           scope: support.function.directive.swift
-        - match: '\b(?:macOS|iOS|watchOS|tvOS|visionOS|Linux|Windows|Android|FreeBSD|OpenBSD|WASI|arm64|arm64e|arm64_32|x86_64|arm|i386|wasm32|wasm64|riscv64|simulator|macCatalyst|true|false)\b'
+        - match: '\b(?:anyAppleOS|macOS|iOS|watchOS|tvOS|visionOS|Linux|Windows|Android|FreeBSD|OpenBSD|WASI|arm64|arm64e|arm64_32|x86_64|arm|i386|wasm32|wasm64|riscv64|simulator|macCatalyst|true|false)\b'
           scope: support.constant.directive.swift
+        - match: '\b[0-9]+(?:\.[0-9]+){1,2}\b'
+          scope: constant.numeric.float.decimal.swift
         - include: expressions
+        - include: punctuation
         - match: '\r?\n'
           pop: true
 
     - match: '^\s*(#(?:else|endif))\b'
       captures:
         1: keyword.control.directive.conditional.swift
+
+    - match: '(#(?:available|unavailable))\s*(\()'
+      captures:
+        1: keyword.control.directive.available.swift
+        2: punctuation.section.parens.begin.swift
+      push: availability-args
 
     - match: '(#(?:available|unavailable))\b'
       captures:
@@ -154,6 +163,15 @@ contexts:
         4: storage.modifier.type.swift
         5: punctuation.section.parens.end.swift
 
+    # @available(...) and @backDeployed(...) availability attributes
+    - match: '(@)(available|backDeployed)\s*(\()'
+      scope: meta.annotation.swift
+      captures:
+        1: punctuation.definition.annotation.swift
+        2: variable.annotation.swift
+        3: punctuation.section.parens.begin.swift
+      push: availability-args
+
     # Swift 5.9+ @freestanding(...) and @attached(...) macro attributes
     - match: '(@)(freestanding|attached)\s*(\()'
       captures:
@@ -169,8 +187,27 @@ contexts:
         1: punctuation.definition.annotation.swift
         2: variable.annotation.swift
 
+  availability-args:
+    - meta_scope: meta.availability.swift
+    - include: comments
+    - match: '\)'
+      scope: punctuation.section.parens.end.swift
+      pop: true
+    - match: '\('
+      scope: punctuation.section.parens.begin.swift
+      push: availability-args
+    - match: '\b(?:anyAppleOS|macOS|iOS|watchOS|tvOS|visionOS|macCatalyst|iOSApplicationExtension|macOSApplicationExtension|macCatalystApplicationExtension|watchOSApplicationExtension|tvOSApplicationExtension|visionOSApplicationExtension|Linux|Windows|Android|FreeBSD|OpenBSD|WASI|swift)\b'
+      scope: support.constant.directive.swift
+    - match: '\b(?:introduced|deprecated|obsoleted|unavailable|message|renamed|noasync|before)\b'
+      scope: support.constant.attribute.availability.swift
+    - match: '\b[0-9]+(?:\.[0-9]+){1,2}\b'
+      scope: constant.numeric.float.decimal.swift
+    - include: expressions
+    - include: punctuation
+
   macro-attribute-args:
     - meta_scope: meta.annotation.macro.swift
+    - include: comments
     - match: '\)'
       scope: punctuation.section.parens.end.swift
       pop: true
@@ -287,14 +324,27 @@ contexts:
     - match: '\b(let|var)\b'
       scope: storage.type.property.swift
 
-    # Protect member access (.some, .sending, .borrowing(), .0, etc.) and backtick-escaped identifiers
+    # Explicit metatype (.Type, .Protocol) and postfix .self expressions
+    - match: '(\.)(self|Type|Protocol)\b(?:[ \t]*(/)(?![/*=]))?'
+      captures:
+        1: punctuation.accessor.dot.swift
+        2: variable.language.swift
+        3: keyword.operator.arithmetic.swift
+
+    # Protect member access (.some, .sending, .borrowing(), .0, .`default`(), .`$raw`, etc.) and raw identifiers
     # from being misclassified as contextual keywords/modifiers or float/regex literals below (sregex-safe without lookbehinds)
-    - match: '(\.)([[:lower:]_]{{ident_char}}*)(?=\s*\()'
+    - match: '(\.)([[:lower:]_]{{ident_char}}*|`[^`\\\r\n]+`)(?=\s*\()'
       captures:
         1: punctuation.accessor.dot.swift
         2: variable.function.swift
 
-    - match: '(\.)([[:lower:]_]{{ident_char}}*)(?:[ \t]*(/)(?![/*=]))?'
+    - match: '(\.)(`\$[^`\\\r\n]+`)(?:[ \t]*(/)(?![/*=]))?'
+      captures:
+        1: punctuation.accessor.dot.swift
+        2: variable.other.projected.swift
+        3: keyword.operator.arithmetic.swift
+
+    - match: '(\.)([[:lower:]_]{{ident_char}}*|`[^`\\\r\n]+`)(?:[ \t]*(/)(?![/*=]))?'
       captures:
         1: punctuation.accessor.dot.swift
         3: keyword.operator.arithmetic.swift
@@ -305,7 +355,16 @@ contexts:
         2: constant.numeric.integer.decimal.swift
         3: keyword.operator.arithmetic.swift
 
-    - match: '`[^`\r\n]+`(?:[ \t]*(/)(?![/*=]))?'
+    - match: '(`\$[^`\\\r\n]+`)(?:[ \t]*(/)(?![/*=]))?'
+      captures:
+        1: variable.other.projected.swift
+        2: keyword.operator.arithmetic.swift
+
+    - match: '(`[^`\\\r\n]+`)(?=\s*\()'
+      captures:
+        1: variable.function.swift
+
+    - match: '`[^`\\\r\n]+`(?:[ \t]*(/)(?![/*=]))?'
       captures:
         1: keyword.operator.arithmetic.swift
 
@@ -341,24 +400,24 @@ contexts:
     - match: '\b(distributed)\b(?=\s+(?:actor|func|var)\b)'
       scope: storage.modifier.concurrency.swift
 
-    - match: '\b(sending)\b(?=\s+(?:@|~|{{ident}}|\(|\[))(?!\s*(?:[:=]|\b(?:in|as|is)\b))'
+    - match: '\b(sending)\b(?=\s+(?:@|~|{{ident}}|\(|\[))(?!\s*(?:[:=]|\b(?:in|as|is|where|else|catch)\b))'
       scope: storage.modifier.concurrency.swift
 
-    - match: '\b(isolated)\b(?=\s+(?:@|~|{{ident}}|\())(?!\s*(?:[:=]|\b(?:in|as|is)\b))'
+    - match: '\b(isolated)\b(?=\s+(?:@|~|{{ident}}|\())(?!\s*(?:[:=]|\b(?:in|as|is|where|else|catch)\b))'
       scope: storage.modifier.concurrency.swift
 
     # Ownership & Parameter Modifiers (Swift 5.9 - 6.x, contextual lookahead protected)
-    - match: '\b(borrowing|consuming)\b(?=\s+(?:func\b|init\b|get\b|set\b|borrow\b|mutate\b|_read\b|_modify\b|@|~|{{ident}}|\(|\[))(?!\s*(?:[:=]|\b(?:in|as|is)\b))'
+    - match: '\b(borrowing|consuming)\b(?=\s+(?:func\b|init\b|get\b|set\b|borrow\b|mutate\b|_read\b|_modify\b|@|~|{{ident}}|\(|\[))(?!\s*(?:[:=]|\b(?:in|as|is|where|else|catch)\b))'
       scope: storage.modifier.ownership.swift
 
-    - match: '\b(yielding)\b(?=\s+(?:get|borrow|mutate)\b)'
+    - match: '\b(yielding)\b(?=\s+(?:get|set|borrow|mutate|_read|_modify)\b)'
       scope: storage.modifier.ownership.swift
 
     - match: '\b(inout|mutating|nonmutating|__shared|__owned)\b'
       scope: storage.modifier.ownership.swift
 
     # Existential, Opaque, and Value Generic Type Modifiers
-    - match: '\b(some|any)\b(?=\s+(?:~|@|{{ident}}|\())(?!\s*(?:[:=]|\b(?:in|as|is)\b))'
+    - match: '\b(some|any)\b(?=\s+(?:~|@|{{ident}}|\())(?!\s*(?:[:=]|\b(?:in|as|is|where|else|catch)\b))'
       scope: storage.modifier.type.swift
 
     # Swift 6.2 SE-0483 InlineArray type sugar: [3 of Int]
@@ -366,7 +425,7 @@ contexts:
       scope: keyword.operator.word.swift
 
     # Parameter Pack Modifiers (Swift 5.9+): 'each' and 'repeat'
-    - match: '\b(each)\b(?=\s+{{ident}})(?!\s*(?:[:=]|\b(?:in|as|is)\b))'
+    - match: '\b(each)\b(?=\s+{{ident}})(?!\s*(?:[:=]|\b(?:in|as|is|where|else|catch)\b))'
       scope: keyword.operator.pack.swift
 
     - match: '\b(repeat)\b(?=\s+(?:each\b|\())'
@@ -381,7 +440,7 @@ contexts:
         4: punctuation.section.parens.end.swift
 
     # Contextual weak / unowned modifiers (property declarations and closure capture lists)
-    - match: '\b(weak|unowned)\b(?=\s+(?:var\b|let\b|{{ident}}))(?!\s*(?:[:=.,)\]]|\b(?:in|as|is)\b))'
+    - match: '\b(weak|unowned)\b(?=\s+(?:var\b|let\b|{{ident}}))(?!\s*(?:[:=.,)\]]|\b(?:in|as|is|where|else|catch)\b))'
       scope: storage.modifier.swift
 
     # Contextual Declaration Modifiers (lookahead protected)
@@ -392,9 +451,18 @@ contexts:
     - match: '\b(static|class)\b'
       scope: storage.modifier.swift
 
-    # Operator & Precedencegroup declarations
+    # Operator & Precedencegroup declarations and attributes
     - match: '\b(operator|precedencegroup)\b'
       scope: storage.type.operator.swift
+
+    - match: '\b(associativity)\s*(:)\s*\b(left|right|none)\b'
+      captures:
+        1: keyword.other.operator.precedence.swift
+        2: punctuation.separator.colon.swift
+        3: constant.language.precedence.swift
+
+    - match: '\b(higherThan|lowerThan|associativity|assignment)\b(?=\s*:)'
+      scope: keyword.other.operator.precedence.swift
 
   # ============================================================================
   # Statements & Control Flow (including Swift 6 Typed Throws & Suppressed ~Copyable)
@@ -419,8 +487,8 @@ contexts:
     - match: '\b(throws|rethrows)\b'
       scope: keyword.control.exception.throws.swift
 
-    # Swift 5.9 / 6.0 Suppressed Protocol Conformance: ~Copyable, ~Escapable, ~BitwiseCopyable
-    - match: '(~)\s*\b(Copyable|Escapable|BitwiseCopyable)\b(?!\s*[.(])'
+    # Swift 5.9 - 6.4 Suppressed Protocol Conformance: ~Copyable, ~Escapable, ~BitwiseCopyable, ~Sendable
+    - match: '(~)\s*\b(Copyable|Escapable|BitwiseCopyable|Sendable)\b(?!\s*[.(])'
       scope: meta.generic-constraint.suppressed.swift
       captures:
         1: keyword.operator.tilde.suppressed.swift
@@ -433,18 +501,18 @@ contexts:
         2: variable.language.swift
 
     # Ownership operators: consume x, copy x, and Swift 6.2 unsafe expr
-    - match: '\b(consume|copy)\b(?=\s+{{ident}})(?!\s*(?:[:=]|\b(?:in|as|is)\b))'
+    - match: '\b(consume|copy)\b(?=\s+{{ident}})(?!\s*(?:[:=]|\b(?:in|as|is|where|else|catch)\b))'
       scope: keyword.operator.word.ownership.swift
 
-    - match: '\b(unsafe)\b(?=\s+(?:{{ident}}|[({]))(?!\s*(?:[:=]|\b(?:in|as|is)\b))'
+    - match: '\b(unsafe)\b(?=\s+(?:{{ident}}|[({]))(?!\s*(?:[:=]|\b(?:in|as|is|where|else|catch)\b))'
       scope: keyword.operator.word.unsafe.swift
 
     # Conditional keywords (if / switch expressions and statements, guard, case, default, where)
     - match: '\b(if|else|guard|switch|case|default|where)\b'
       scope: keyword.control.conditional.swift
 
-    # Loop keywords
-    - match: '\b(for|in|while|repeat|break|continue|fallthrough)\b'
+    # Loop keywords (exclude argument labels like 'for:', 'in:', 'while:')
+    - match: '\b(for|in|while|repeat|break|continue|fallthrough)\b(?!\s*:)'
       scope: keyword.control.loop.swift
 
     # Concurrency flow keyword: await
@@ -465,10 +533,10 @@ contexts:
       scope: keyword.control.exception.swift
 
     # Accessor keywords inside property/subscript blocks (including Swift 6.4 borrow/mutate)
-    - match: '\b(get|borrow|mutate|_read|_modify)\b(?=\s*(?:[{}]|$|\b(?:set|throws|async|mutating|nonmutating)\b))'
+    - match: '\b(get|borrow|mutate|_read|_modify|unsafeAddress|unsafeMutableAddress)\b(?=\s*(?:[{}]|//|/\*|$|\b(?:set|borrow|mutate|yielding|borrowing|consuming|throws|async|mutating|nonmutating)\b))'
       scope: keyword.other.accessor.swift
 
-    - match: '\b(set|willSet|didSet)\b(?=\s*(?:\(\s*{{ident}}\s*\)\s*\{|[{}]|$|\b(?:get|mutating|nonmutating)\b))'
+    - match: '\b(set|willSet|didSet)\b(?=\s*(?:\(\s*{{ident}}\s*\)\s*\{|[{}]|//|/\*|$|\b(?:get|borrow|mutate|yielding|borrowing|consuming|mutating|nonmutating)\b))'
       scope: keyword.other.accessor.swift
 
     - match: '\b(accesses|initializes)\b(?=\s*\()'
@@ -508,7 +576,7 @@ contexts:
           captures:
             1: punctuation.section.interpolation.begin.swift
           push: interpolation-body
-        - match: '\\#(?:[0\\tnr"''\n]|u\{[0-9a-fA-F]{1,8}\})'
+        - match: '\\#(?:[0\\tnr"'']|[ \t]*\r?\n|u\{[0-9a-fA-F]{1,8}\})'
           scope: constant.character.escape.swift
 
     - match: '(##)(""")'
@@ -526,7 +594,7 @@ contexts:
           captures:
             1: punctuation.section.interpolation.begin.swift
           push: interpolation-body
-        - match: '\\##(?:[0\\tnr"''\n]|u\{[0-9a-fA-F]{1,8}\})'
+        - match: '\\##(?:[0\\tnr"'']|[ \t]*\r?\n|u\{[0-9a-fA-F]{1,8}\})'
           scope: constant.character.escape.swift
 
     - match: '(###+)(""")'
@@ -544,7 +612,7 @@ contexts:
           captures:
             1: punctuation.section.interpolation.begin.swift
           push: interpolation-body
-        - match: '\\###+(?:[0\\tnr"''\n]|u\{[0-9a-fA-F]{1,8}\})'
+        - match: '\\###+(?:[0\\tnr"'']|[ \t]*\r?\n|u\{[0-9a-fA-F]{1,8}\})'
           scope: constant.character.escape.swift
 
     # Multiline string literal: """ ... """
@@ -555,6 +623,8 @@ contexts:
         - match: '"""'
           scope: punctuation.definition.string.end.swift
           pop: true
+        - match: '\\[ \t]*\r?\n'
+          scope: constant.character.escape.swift
         - include: string-escaped-and-interpolated
 
     # Raw single-line string literal: #" ... "# (1, 2, or 3+ hashes)
@@ -573,7 +643,7 @@ contexts:
           captures:
             1: punctuation.section.interpolation.begin.swift
           push: interpolation-body
-        - match: '\\#(?:[0\\tnr"''\n]|u\{[0-9a-fA-F]{1,8}\})'
+        - match: '\\#(?:[0\\tnr"'']|u\{[0-9a-fA-F]{1,8}\})'
           scope: constant.character.escape.swift
         - match: '\r?\n'
           scope: invalid.illegal.unclosed-string.swift
@@ -594,7 +664,7 @@ contexts:
           captures:
             1: punctuation.section.interpolation.begin.swift
           push: interpolation-body
-        - match: '\\##(?:[0\\tnr"''\n]|u\{[0-9a-fA-F]{1,8}\})'
+        - match: '\\##(?:[0\\tnr"'']|u\{[0-9a-fA-F]{1,8}\})'
           scope: constant.character.escape.swift
         - match: '\r?\n'
           scope: invalid.illegal.unclosed-string.swift
@@ -615,7 +685,7 @@ contexts:
           captures:
             1: punctuation.section.interpolation.begin.swift
           push: interpolation-body
-        - match: '\\###+(?:[0\\tnr"''\n]|u\{[0-9a-fA-F]{1,8}\})'
+        - match: '\\###+(?:[0\\tnr"'']|u\{[0-9a-fA-F]{1,8}\})'
           scope: constant.character.escape.swift
         - match: '\r?\n'
           scope: invalid.illegal.unclosed-string.swift
@@ -749,7 +819,7 @@ contexts:
     - match: '\\\('
       scope: punctuation.section.interpolation.begin.swift
       push: interpolation-body
-    - match: '\\(?:[0\\tnr"''\n]|u\{[0-9a-fA-F]{1,8}\})'
+    - match: '\\(?:[0\\tnr"'']|u\{[0-9a-fA-F]{1,8}\})'
       scope: constant.character.escape.swift
 
   interpolation-body:
@@ -807,7 +877,7 @@ contexts:
         2: keyword.operator.arithmetic.swift
 
     # Built-in Standard Library, Concurrency, Observation, and Synchronization types
-    - match: '\b(?:Int|Int8|Int16|Int32|Int64|Int128|UInt|UInt8|UInt16|UInt32|UInt64|UInt128|Float|Float16|Float32|Float64|Float80|Double|Bool|String|Substring|Character|UnicodeScalar|StaticString|Array|InlineArray|UniqueArray|UniqueBox|Span|RawSpan|MutableSpan|MutableRawSpan|OutputSpan|OutputRawSpan|Ref|MutableRef|Dictionary|Set|Optional|Result|Range|ClosedRange|PartialRangeFrom|PartialRangeThrough|PartialRangeUpTo|Regex|AnyRegexOutput|RegexComponent|Error|Never|Void|Any|AnyObject|AnyClass|AnyHashable|AnyKeyPath|PartialKeyPath|KeyPath|WritableKeyPath|ReferenceWritableKeyPath|Sendable|SendableMetatype|Copyable|Escapable|BitwiseCopyable|Equatable|Hashable|Comparable|Codable|Encodable|Decodable|Identifiable|CustomStringConvertible|CustomDebugStringConvertible|Sequence|Collection|BidirectionalCollection|RandomAccessCollection|RangeReplaceableCollection|IteratorProtocol|Iterable|BorrowingIteratorProtocol|AsyncSequence|AsyncIteratorProtocol|AsyncStream|AsyncThrowingStream|Task|TaskGroup|ThrowingTaskGroup|DiscardingTaskGroup|ThrowingDiscardingTaskGroup|MainActor|GlobalActor|Actor|DistributedActor|DistributedActorSystem|SerialExecutor|TaskExecutor|Executor|Clock|InstantProtocol|ContinuousClock|SuspendingClock|Duration|Instant|CheckedContinuation|UnsafeContinuation|UnsafePointer|UnsafeMutablePointer|UnsafeRawPointer|UnsafeMutableRawPointer|UnsafeBufferPointer|UnsafeMutableBufferPointer|AutoreleasingUnsafeMutablePointer|Unmanaged|ObservationRegistrar|Mutex|Atomic|AtomicLazyReference|WordPair)\b'
+    - match: '\b(?:Int|Int8|Int16|Int32|Int64|Int128|UInt|UInt8|UInt16|UInt32|UInt64|UInt128|Float|Float16|Float32|Float64|Float80|Double|Bool|String|Substring|Character|UnicodeScalar|StaticString|Array|InlineArray|RigidArray|UniqueArray|UniqueBox|Span|RawSpan|MutableSpan|MutableRawSpan|OutputSpan|OutputRawSpan|UTF8Span|Ref|MutableRef|Dictionary|Set|RangeSet|DiscontiguousSlice|Optional|Result|Range|ClosedRange|PartialRangeFrom|PartialRangeThrough|PartialRangeUpTo|Regex|AnyRegexOutput|RegexComponent|Error|EncodingError|DecodingError|CancellationError|Never|Void|Any|AnyObject|AnyClass|AnyHashable|AnyKeyPath|PartialKeyPath|KeyPath|WritableKeyPath|ReferenceWritableKeyPath|Sendable|SendableMetatype|Copyable|Escapable|BitwiseCopyable|Equatable|Hashable|Comparable|Codable|Encodable|Decodable|Identifiable|CustomStringConvertible|CustomDebugStringConvertible|Sequence|Collection|BidirectionalCollection|RandomAccessCollection|RangeReplaceableCollection|IteratorProtocol|Iterable|BorrowingIteratorProtocol|AsyncSequence|AsyncIteratorProtocol|AsyncStream|AsyncThrowingStream|Task|TaskGroup|ThrowingTaskGroup|DiscardingTaskGroup|ThrowingDiscardingTaskGroup|MainActor|GlobalActor|Actor|DistributedActor|DistributedActorSystem|SerialExecutor|TaskExecutor|Executor|Clock|InstantProtocol|ContinuousClock|SuspendingClock|Duration|Instant|CheckedContinuation|UnsafeContinuation|OpaquePointer|UnsafePointer|UnsafeMutablePointer|UnsafeRawPointer|UnsafeMutableRawPointer|UnsafeBufferPointer|UnsafeMutableBufferPointer|AutoreleasingUnsafeMutablePointer|Unmanaged|ObservationRegistrar|Mutex|Atomic|AtomicLazyReference|WordPair)\b'
       scope: support.type.swift
 
     # General UpperCamelCase Type Identifier
@@ -842,8 +912,12 @@ contexts:
         1: variable.other.projected.swift
         2: keyword.operator.arithmetic.swift
 
+    # Built-in scoped / concurrency / pointer functions (support parenthesized, generic, and trailing-closure calls)
+    - match: '\b(withUnsafePointer|withUnsafeMutablePointer|withUnsafeBytes|withUnsafeMutableBytes|withUnsafeTemporaryAllocation|withCheckedContinuation|withCheckedThrowingContinuation|withUnsafeContinuation|withUnsafeThrowingContinuation|withTaskGroup|withThrowingTaskGroup|withDiscardingTaskGroup|withThrowingDiscardingTaskGroup|withTaskCancellationHandler|withTaskCancellationShield|withTaskPriorityEscalationHandler|withTaskExecutorPreference|withDeadline)\b(?=\s*[(<{])'
+      scope: support.function.builtin.swift
+
     # Built-in global functions
-    - match: '\b(print|debugPrint|dump|fatalError|precondition|preconditionFailure|assert|assertionFailure|abs|min|max|zip|stride|sequence|repeatElement|swap|withUnsafePointer|withUnsafeMutablePointer|withUnsafeBytes|withUnsafeMutableBytes|withCheckedContinuation|withCheckedThrowingContinuation|withUnsafeContinuation|withUnsafeThrowingContinuation|withTaskGroup|withThrowingTaskGroup|withDiscardingTaskGroup|withThrowingDiscardingTaskGroup|withTaskCancellationHandler|unsafeBitCast|unsafeDowncast|numericCast|type)\b(?=\s*\()'
+    - match: '\b(print|debugPrint|dump|fatalError|precondition|preconditionFailure|assert|assertionFailure|abs|min|max|zip|stride|sequence|repeatElement|swap|unsafeBitCast|unsafeDowncast|numericCast|type)\b(?=\s*(?:\(|<[^>\r\n]+>\s*\())'
       scope: support.function.builtin.swift
 
     # General function or method call: foo(...)
@@ -852,7 +926,7 @@ contexts:
         1: variable.function.swift
 
     # Plain variable / identifier (also consumes trailing division '/' to prevent '/.../' regex false positives)
-    - match: '\b(?!(?:is|as)\b){{ident_head}}{{ident_char}}*\b(?:(!)?[ \t]*(/)(?![/*=]))?'
+    - match: '\b(?!(?:is|as)\b(?!\s*:)){{ident_head}}{{ident_char}}*\b(?:(!)?[ \t]*(/)(?![/*=]))?'
       captures:
         1: keyword.operator.logical.swift
         2: keyword.operator.arithmetic.swift
@@ -861,13 +935,13 @@ contexts:
   # Operators & Punctuation
   # ============================================================================
   operators:
-    # Type casting operators: is, as, as?, as!
+    # Type casting operators: is, as, as?, as! (exclude 'as:' argument label)
     - match: '\b(as)(\?|!)'
       captures:
         1: keyword.operator.word.cast.swift
         2: keyword.operator.optional.swift
 
-    - match: '\b(is|as)\b'
+    - match: '\b(is|as)\b(?!\s*:)'
       scope: keyword.operator.word.cast.swift
 
     # Return arrow ->

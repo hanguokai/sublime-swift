@@ -234,6 +234,13 @@ extension BinaryTree.Node {
 precedencegroup ExponentiationPrecedence {
 // ^^^^^^^^^^^^ storage.type.operator.swift
     higherThan: MultiplicationPrecedence
+//  ^^^^^^^^^^ keyword.other.operator.precedence.swift
+    associativity: right
+//  ^^^^^^^^^^^^^ keyword.other.operator.precedence.swift
+//                 ^^^^^ constant.language.precedence.swift
+    assignment: false
+//  ^^^^^^^^^^ keyword.other.operator.precedence.swift
+//              ^^^^^ constant.language.boolean.swift
 }
 infix operator **: ExponentiationPrecedence
 // ^^ storage.modifier.swift
@@ -717,10 +724,167 @@ actor LocalCounter {
 }
 // <- punctuation.section.block.end.swift
 
+// MARK: - Swift 6.3 & 6.4 Features (~Sendable, anyAppleOS, RigidArray, Concurrency)
+import Synchronization
+// <- meta.import.swift keyword.control.import.swift
+//     ^^^^^^^^^^^^^^^ support.type.user-defined.swift
+
+@available(anyAppleOS 26.0, iOS 18.2.1, introduced: 18.0, deprecated, noasync, *)
+// ^^^^^^^ meta.annotation.swift variable.annotation.swift
+//         ^^^^^^^^^^ meta.availability.swift support.constant.directive.swift
+//                    ^^^^ constant.numeric.float.decimal.swift
+//                          ^^^ support.constant.directive.swift
+//                              ^^^^^^ constant.numeric.float.decimal.swift
+//                                      ^^^^^^^^^^ support.constant.attribute.availability.swift
+//                                                        ^^^^^^^^^^ support.constant.attribute.availability.swift
+//                                                                    ^^^^^^^ support.constant.attribute.availability.swift
+//                                                                             ^ keyword.operator.arithmetic.swift
+public class NonSendableToken: ~Sendable {
+//           ^^^^^^^^^^^^^^^^ entity.name.type.class.swift
+//                             ^ meta.generic-constraint.suppressed.swift keyword.operator.tilde.suppressed.swift
+//                              ^^^^^^^^ meta.generic-constraint.suppressed.swift support.type.protocol.suppressed.swift
+    var buffer: RigidArray<Int>
+//              ^^^^^^^^^^ support.type.swift
+    var fixed: InlineArray<4, Int>
+//             ^^^^^^^^^^^ support.type.swift
+    var span: Span<Int>
+//            ^^^^ support.type.swift
+    var mspan: MutableSpan<Int>
+//             ^^^^^^^^^^^ support.type.swift
+    var mrspan: MutableRawSpan
+//              ^^^^^^^^^^^^^^ support.type.swift
+    var text: UTF8Span
+//            ^^^^^^^^ support.type.swift
+    var indices: RangeSet<Int>
+//               ^^^^^^^^ support.type.swift
+    var slice: DiscontiguousSlice<Array<Int>>
+//             ^^^^^^^^^^^^^^^^^^ support.type.swift
+    var handle: OpaquePointer?
+//              ^^^^^^^^^^^^^ support.type.swift
+    var counter: Atomic<Int>
+//               ^^^^^^ support.type.swift
+    var lock: Mutex<Int>
+//            ^^^^^ support.type.swift
+    var lazyRef: AtomicLazyReference<NonSendableToken>
+//               ^^^^^^^^^^^^^^^^^^^ support.type.swift
+
+    isolated deinit {
+//  ^^^^^^^^ storage.modifier.concurrency.swift
+//           ^^^^^^ storage.type.function.deinit.swift
+    }
+}
+
+@diagnose(DeprecatedDeclaration, as: warning, reason: "legacy")
+// ^^^^^^ meta.annotation.swift variable.annotation.swift
+//                               ^^ - keyword.operator.word.cast.swift
+//                                                    ^^^^^^^^ string.quoted.double.swift
+@available(
+    anyAppleOS 26.0, // replaces oldAPI()
+//  ^^^^^^^^^^ meta.availability.swift support.constant.directive.swift
+//                   ^^^^^^^^^^^^^^^^^^^^ comment.line.double-slash.swift
+    *
+//  ^ meta.availability.swift keyword.operator.arithmetic.swift
+)
+@backDeployed(before: anyAppleOS 26.0)
+// ^^^^^^^^^^ meta.annotation.swift variable.annotation.swift
+//            ^^^^^^ meta.availability.swift support.constant.attribute.availability.swift
+//                    ^^^^^^^^^^ meta.availability.swift support.constant.directive.swift
+//                               ^^^^ constant.numeric.float.decimal.swift
+public func runShieldedWork() async {
+    #if anyAppleOS && compiler(>=6.3.1)
+//  ^^^ keyword.control.directive.conditional.swift
+//      ^^^^^^^^^^ support.constant.directive.swift
+//                    ^^^^^^^^ support.function.directive.swift
+//                            ^ punctuation.section.parens.begin.swift
+//                               ^^^^^ constant.numeric.float.decimal.swift
+//                                    ^ punctuation.section.parens.end.swift
+    if #available(anyAppleOS 26.0, macOS 26.4, *) {
+//     ^^^^^^^^^^ keyword.control.directive.available.swift
+//                ^^^^^^^^^^ meta.availability.swift support.constant.directive.swift
+//                           ^^^^ constant.numeric.float.decimal.swift
+//                                 ^^^^^ support.constant.directive.swift
+        await withTaskCancellationShield {
+//            ^^^^^^^^^^^^^^^^^^^^^^^^^^ support.function.builtin.swift
+            await withTaskPriorityEscalationHandler {
+//                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ support.function.builtin.swift
+            } onPriorityEscalated: { _, _ in }
+        }
+        await withTaskExecutorPreference(nil) {
+//            ^^^^^^^^^^^^^^^^^^^^^^^^^^ support.function.builtin.swift
+            await withDeadline(in: .now) {
+//                ^^^^^^^^^^^^ support.function.builtin.swift
+//                             ^^ - keyword.control.loop.swift
+            }
+        }
+    }
+    #endif
+
+    withUnsafeTemporaryAllocation(of: Int.self, capacity: 4) { _ in }
+//  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ support.function.builtin.swift
+
+    do throws(CancellationError) {
+//  ^^ keyword.control.exception.swift
+//     ^^^^^^ meta.throws.typed.swift keyword.control.exception.throws.swift
+//            ^^^^^^^^^^^^^^^^^ support.type.swift
+    } catch {
+//    ^^^^^ keyword.control.exception.swift
+    }
+
+    let metatype: Int.Type = Int.self
+//                    ^^^^ variable.language.swift
+//                               ^^^^ variable.language.swift
+    let protoType: Sendable.Protocol = Sendable.self
+//                          ^^^^^^^^ variable.language.swift
+//                                              ^^^^ variable.language.swift
+    let cont = """
+        line one \  
+//               ^^^ constant.character.escape.swift
+        line two
+        """
+    _ = (metatype, protoType, cont)
+}
+
+public struct FixedBuffer<let N: Int>: ~Copyable {
+//            ^^^^^^^^^^^ entity.name.type.struct.swift
+//                        ^^^ storage.type.property.swift
+//                               ^^^ support.type.swift
+//                                     ^ meta.generic-constraint.suppressed.swift keyword.operator.tilde.suppressed.swift
+//                                      ^^^^^^^^ meta.generic-constraint.suppressed.swift support.type.protocol.suppressed.swift
+    public func `run benchmark`() {}
+//              ^^^^^^^^^^^^^^^ entity.name.function.swift
+    public func testRawIdentifiers() {
+        `run benchmark`()
+//      ^^^^^^^^^^^^^^^ variable.function.swift
+        self.`run benchmark`()
+//      ^^^^ variable.language.swift
+//           ^^^^^^^^^^^^^^^ variable.function.swift
+        _ = self.`$raw property`
+//               ^^^^^^^^^^^^^^^ variable.other.projected.swift
+        let borrowing = Optional(1)
+        guard let borrowing else { return }
+//                ^^^^^^^^^ - storage.modifier
+        if case let consuming = borrowing where consuming > 0 {
+//                  ^^^^^^^^^ - storage.modifier
+            _ = consuming
+        }
+    }
+}
+
+public protocol BorrowableContainer: ~Copyable {
+    var element: Int { borrow mutate }
+//                     ^^^^^^ keyword.other.accessor.swift
+//                            ^^^^^^ keyword.other.accessor.swift
+}
+
 let unclosed = "unterminated
 //                          ^ invalid.illegal.unclosed-string.swift
+let unclosedEsc = "unterminated \
+//                               ^ invalid.illegal.unclosed-string.swift
+let afterUnclosed = 42
+// <- storage.type.property.swift - string.quoted.double.swift
 
 /* Outer block comment
    /* Nested block comment */
    Still in outer comment */
 // ^^^^^^^^^^^^^^^^^^^^^^ comment.block.swift
+

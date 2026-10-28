@@ -19,6 +19,8 @@ jobs:
         build: [stable, latest]
     steps:
       - uses: actions/checkout@v4
+      - name: Verify spec alignment, sregex compatibility & 100% scope coverage
+        run: ./scripts/verify.sh
       - uses: SublimeText/syntax-test-action@v2
         with:
           build: ${{ matrix.build }}
