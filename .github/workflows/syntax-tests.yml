@@ -1,0 +1,25 @@
+name: Syntax Tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  syntax-tests:
+    name: Sublime Text (${{ matrix.build }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        build: [stable, latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: SublimeText/syntax-test-action@v2
+        with:
+          build: ${{ matrix.build }}
+          package_name: Swift6

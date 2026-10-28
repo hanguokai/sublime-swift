@@ -5,7 +5,7 @@ name: Swift
 file_extensions:
   - swift
   - swiftinterface
-first_line_match: '^#!.*\bswift\b'
+first_line_match: '^(?:#!.*\bswift\b|//\s*swift-interface-format-version)'
 scope: source.swift
 version: 2
 
@@ -119,7 +119,7 @@ contexts:
         - include: comments
         - match: '\b(?:os|arch|swift|compiler|canImport|targetEnvironment|_endian|_runtime|_ptrauth|hasAttribute|hasFeature)\b'
           scope: support.function.directive.swift
-        - match: '\b(?:macOS|iOS|watchOS|tvOS|visionOS|Linux|Windows|Android|FreeBSD|OpenBSD|WASI|arm64|x86_64|arm|i386|wasm32|simulator|macCatalyst| true|false)\b'
+        - match: '\b(?:macOS|iOS|watchOS|tvOS|visionOS|Linux|Windows|Android|FreeBSD|OpenBSD|WASI|arm64|arm64e|arm64_32|x86_64|arm|i386|wasm32|wasm64|riscv64|simulator|macCatalyst|true|false)\b'
           scope: support.constant.directive.swift
         - include: expressions
         - match: '\r?\n'
@@ -279,6 +279,19 @@ contexts:
     - match: '\b(let|var)\b'
       scope: storage.type.property.swift
 
+    # Protect member access (.some, .sending, .borrowing(), etc.) and backtick-escaped identifiers
+    # from being misclassified as contextual keywords/modifiers below (sregex-safe without lookbehinds)
+    - match: '(\.)([a-z_]{{ident_char}}*)(?=\s*\()'
+      captures:
+        1: punctuation.accessor.dot.swift
+        2: variable.function.swift
+
+    - match: '(\.)([a-z_]{{ident_char}}*)'
+      captures:
+        1: punctuation.accessor.dot.swift
+
+    - match: '`[^`\r\n]+`'
+
     # Access Control Modifiers (including Swift 5.9+ 'package' and '...(set)')
     - match: '\b(open|public|package|internal|fileprivate|private)\s*(\()\s*(set)\s*(\))'
       captures:
@@ -287,7 +300,10 @@ contexts:
         3: keyword.other.accessor.swift
         4: punctuation.section.parens.end.swift
 
-    - match: '\b(open|public|package|internal|fileprivate|private)\b'
+    - match: '\b(package)\b(?=\s+(?:@[A-Za-z_][A-Za-z0-9_]*(?:\([^)]*\))?\s+|(?:final|static|class|distributed|nonisolated(?:\([^)]*\))?|indirect|convenience|required|override|mutating|nonmutating|borrowing|consuming|lazy|weak|unowned)\s+)*(?:import|let|var|func|macro|struct|class|enum|actor|protocol|extension|typealias|associatedtype|init|deinit|subscript|operator|precedencegroup)\b)'
+      scope: storage.modifier.access-control.swift
+
+    - match: '\b(open|public|internal|fileprivate|private)\b'
       scope: storage.modifier.access-control.swift
 
     # Swift 5.10 / 6.x nonisolated(unsafe) & nonisolated(nonsending)
@@ -298,26 +314,41 @@ contexts:
         3: storage.modifier.concurrency.swift
         4: punctuation.section.parens.end.swift
 
-    # Concurrency & Isolation modifiers (Swift 5.5 - 6.x)
+    # Concurrency & Isolation modifiers (Swift 5.5 - 6.x, contextual lookahead protected)
     - match: '\b(async|reasync)\b'
       scope: storage.modifier.async.swift
 
-    - match: '\b(nonisolated|isolated|sending|distributed)\b'
+    - match: '\b(nonisolated)\b'
       scope: storage.modifier.concurrency.swift
 
-    # Ownership & Parameter Modifiers (Swift 5.9 - 6.x)
-    - match: '\b(borrowing|consuming|inout|mutating|nonmutating|yielding|__shared|__owned)\b'
+    - match: '\b(distributed)\b(?=\s+(?:actor|func|var)\b)'
+      scope: storage.modifier.concurrency.swift
+
+    - match: '\b(sending)\b(?=\s+(?:@|~|{{ident}}|\(|\[))(?!\s*(?:[:=]|\b(?:in|as|is)\b))'
+      scope: storage.modifier.concurrency.swift
+
+    - match: '\b(isolated)\b(?=\s+(?:@|~|{{ident}}|\())(?!\s*(?:[:=]|\b(?:in|as|is)\b))'
+      scope: storage.modifier.concurrency.swift
+
+    # Ownership & Parameter Modifiers (Swift 5.9 - 6.x, contextual lookahead protected)
+    - match: '\b(borrowing|consuming)\b(?=\s+(?:func\b|init\b|get\b|set\b|borrow\b|mutate\b|_read\b|_modify\b|@|~|{{ident}}|\(|\[))(?!\s*(?:[:=]|\b(?:in|as|is)\b))'
+      scope: storage.modifier.ownership.swift
+
+    - match: '\b(yielding)\b(?=\s+(?:get|borrow|mutate)\b)'
+      scope: storage.modifier.ownership.swift
+
+    - match: '\b(inout|mutating|nonmutating|__shared|__owned)\b'
       scope: storage.modifier.ownership.swift
 
     # Existential, Opaque, and Value Generic Type Modifiers
-    - match: '\b(some|any)\b'
+    - match: '\b(some|any)\b(?=\s+(?:~|@|{{ident}}|\())(?!\s*(?:[:=]|\b(?:in|as|is)\b))'
       scope: storage.modifier.type.swift
 
-    # Parameter Pack Modifiers (Swift 5.9+): 'each' and 'repeat' (when not followed by '{')
-    - match: '\b(each)\b'
+    # Parameter Pack Modifiers (Swift 5.9+): 'each' and 'repeat'
+    - match: '\b(each)\b(?=\s+{{ident}})(?!\s*(?:[:=]|\b(?:in|as|is)\b))'
       scope: keyword.operator.pack.swift
 
-    - match: '\b(repeat)\b(?!\s*\{)'
+    - match: '\b(repeat)\b(?=\s+(?:each\b|\())'
       scope: keyword.operator.pack.swift
 
     # unowned(safe) / unowned(unsafe)
@@ -372,9 +403,12 @@ contexts:
         1: keyword.operator.word.ownership.swift
         2: variable.language.swift
 
-    # Ownership operators: consume x, copy x
-    - match: '\b(consume|copy)\b(?=\s+{{ident}})'
+    # Ownership operators: consume x, copy x, and Swift 6.2 unsafe expr
+    - match: '\b(consume|copy)\b(?=\s+{{ident}})(?!\s*(?:[:=]|\b(?:in|as|is)\b))'
       scope: keyword.operator.word.ownership.swift
+
+    - match: '\b(unsafe)\b(?=\s+(?:{{ident}}|[({]))(?!\s*(?:[:=]|\b(?:in|as|is)\b))'
+      scope: keyword.operator.word.unsafe.swift
 
     # Conditional keywords (if / switch expressions and statements, guard, case, default, where)
     - match: '\b(if|else|guard|switch|case|default|where)\b'
@@ -401,8 +435,14 @@ contexts:
     - match: '\b(do|try|catch|throw)\b'
       scope: keyword.control.exception.swift
 
-    # Accessor keywords inside property/subscript blocks
-    - match: '\b(get|set|willSet|didSet|_read|_modify|accesses|initializes)\b(?=\s*(?:[\({]|$|\r?\n|throws\b|async\b))'
+    # Accessor keywords inside property/subscript blocks (including Swift 6.4 borrow/mutate)
+    - match: '\b(get|borrow|mutate|_read|_modify)\b(?=\s*(?:\{|$|\r?\n|throws\b|async\b))'
+      scope: keyword.other.accessor.swift
+
+    - match: '\b(set|willSet|didSet)\b(?=\s*(?:\(\s*{{ident}}\s*\)\s*\{|\{|$|\r?\n))'
+      scope: keyword.other.accessor.swift
+
+    - match: '\b(accesses|initializes)\b(?=\s*\()'
       scope: keyword.other.accessor.swift
 
   # ============================================================================
@@ -672,19 +712,21 @@ contexts:
     - match: '(#(?:selector|keyPath|externalMacro|colorLiteral|fileLiteral|imageLiteral|unsafe))\b'
       scope: support.function.magic.swift
 
-    # Swift 5.9 / 6.0 Freestanding Macro Expansion (#expect, #require, #Preview, #Predicate, or custom #myMacro)
-    - match: '(#)({{ident}})'
+    # Swift 5.9 / 6.0 Freestanding Macro Expansion (#expect, #Preview, #Module.myMacro)
+    - match: '(#)(?:({{ident}})(\.))?({{ident}})'
       scope: meta.macro.expansion.swift
       captures:
         1: punctuation.definition.macro.swift
-        2: support.function.macro.swift
+        2: support.other.module.swift
+        3: punctuation.accessor.dot.swift
+        4: support.function.macro.swift
 
   # ============================================================================
   # Types (Standard Library, Concurrency, Swift 6 Primitives & User Types)
   # ============================================================================
   types:
     # Built-in Standard Library, Concurrency, Observation, and Synchronization types
-    - match: '\b(?:Int|Int8|Int16|Int32|Int64|Int128|UInt|UInt8|UInt16|UInt32|UInt64|UInt128|Float|Float16|Float32|Float64|Float80|Double|Bool|String|Substring|Character|UnicodeScalar|StaticString|Array|InlineArray|Span|RawSpan|MutableSpan|Dictionary|Set|Optional|Result|Range|ClosedRange|PartialRangeFrom|PartialRangeThrough|PartialRangeUpTo|Error|Never|Void|Any|AnyObject|AnyClass|AnyHashable|AnyKeyPath|PartialKeyPath|KeyPath|WritableKeyPath|ReferenceWritableKeyPath|Sendable|SendableMetatype|Copyable|Escapable|BitwiseCopyable|Equatable|Hashable|Comparable|Codable|Encodable|Decodable|Identifiable|CustomStringConvertible|CustomDebugStringConvertible|Sequence|Collection|BidirectionalCollection|RandomAccessCollection|RangeReplaceableCollection|IteratorProtocol|AsyncSequence|AsyncIteratorProtocol|AsyncStream|AsyncThrowingStream|Task|TaskGroup|ThrowingTaskGroup|DiscardingTaskGroup|ThrowingDiscardingTaskGroup|MainActor|GlobalActor|Actor|DistributedActor|ContinuousClock|SuspendingClock|Duration|Instant|CheckedContinuation|UnsafeContinuation|UnsafePointer|UnsafeMutablePointer|UnsafeRawPointer|UnsafeMutableRawPointer|UnsafeBufferPointer|UnsafeMutableBufferPointer|AutoreleasingUnsafeMutablePointer|Unmanaged|ObservationRegistrar|Mutex|Atomic)\b'
+    - match: '\b(?:Int|Int8|Int16|Int32|Int64|Int128|UInt|UInt8|UInt16|UInt32|UInt64|UInt128|Float|Float16|Float32|Float64|Float80|Double|Bool|String|Substring|Character|UnicodeScalar|StaticString|Array|InlineArray|UniqueArray|UniqueBox|Span|RawSpan|MutableSpan|MutableRawSpan|OutputSpan|OutputRawSpan|Ref|MutableRef|Dictionary|Set|Optional|Result|Range|ClosedRange|PartialRangeFrom|PartialRangeThrough|PartialRangeUpTo|Regex|AnyRegexOutput|RegexComponent|Error|Never|Void|Any|AnyObject|AnyClass|AnyHashable|AnyKeyPath|PartialKeyPath|KeyPath|WritableKeyPath|ReferenceWritableKeyPath|Sendable|SendableMetatype|Copyable|Escapable|BitwiseCopyable|Equatable|Hashable|Comparable|Codable|Encodable|Decodable|Identifiable|CustomStringConvertible|CustomDebugStringConvertible|Sequence|Collection|BidirectionalCollection|RandomAccessCollection|RangeReplaceableCollection|IteratorProtocol|Iterable|BorrowingIteratorProtocol|AsyncSequence|AsyncIteratorProtocol|AsyncStream|AsyncThrowingStream|Task|TaskGroup|ThrowingTaskGroup|DiscardingTaskGroup|ThrowingDiscardingTaskGroup|MainActor|GlobalActor|Actor|DistributedActor|DistributedActorSystem|SerialExecutor|TaskExecutor|Executor|Clock|InstantProtocol|ContinuousClock|SuspendingClock|Duration|Instant|CheckedContinuation|UnsafeContinuation|UnsafePointer|UnsafeMutablePointer|UnsafeRawPointer|UnsafeMutableRawPointer|UnsafeBufferPointer|UnsafeMutableBufferPointer|AutoreleasingUnsafeMutablePointer|Unmanaged|ObservationRegistrar|Mutex|Atomic|AtomicLazyReference|WordPair)\b'
       scope: support.type.swift
 
     # General UpperCamelCase Type Identifier
@@ -788,6 +830,8 @@ contexts:
       scope: punctuation.section.brackets.end.swift
     - match: ','
       scope: punctuation.separator.comma.swift
+    - match: '::'
+      scope: punctuation.accessor.module.swift
     - match: ':'
       scope: punctuation.separator.colon.swift
     - match: ';'

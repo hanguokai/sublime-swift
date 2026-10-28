@@ -165,6 +165,48 @@ func testLiterals() {
     #expect(bin == 165)
 //  ^ punctuation.definition.macro.swift
 //   ^^^^^^ support.function.macro.swift
+
+    let expanded = #Macros.stringify(bin)
+//                 ^ punctuation.definition.macro.swift
+//                  ^^^^^^ support.other.module.swift
+//                        ^ punctuation.accessor.dot.swift
+//                         ^^^^^^^^^ support.function.macro.swift
+
+    let qualified = CoreModule::compute(bin)
+//                            ^^ punctuation.accessor.module.swift
+//                              ^^^^^^^ variable.function.swift
+}
+
+// MARK: - Contextual Keywords & Accessors Regression
+func testContextualKeywords() {
+    let package = 1
+//      ^^^^^^^ - storage.modifier
+    let consuming = 2
+//      ^^^^^^^^^ - storage.modifier
+    for each in [1, 2] {
+//      ^^^^ - keyword.operator.pack.swift
+        _ = each
+    }
+    let val = worker.sending
+//                   ^^^^^^^ - storage.modifier
+    worker.borrowing()
+//         ^^^^^^^^^ variable.function.swift - storage.modifier
+    let ptr = unsafe getPointer()
+//            ^^^^^^ keyword.operator.word.unsafe.swift
+}
+
+struct StorageView {
+    var item: Int {
+        yielding borrow {
+//      ^^^^^^^^ storage.modifier.ownership.swift
+//               ^^^^^^ keyword.other.accessor.swift
+            yield 0
+//          ^^^^^ keyword.control.flow.swift
+        }
+        mutate {
+//      ^^^^^^ keyword.other.accessor.swift
+        }
+    }
 }
 
 /* Outer block comment
