@@ -551,6 +551,7 @@ stack = [Frame("main")]
 last_code_scopes = None
 last_code_line_no = 0
 last_code_line = ""
+assertion_line_count = 0
 assertion_count = 0
 
 for idx, line in enumerate(test_lines):
@@ -563,6 +564,7 @@ for idx, line in enumerate(test_lines):
     m_caret = re.match(r"^(\s*)//\s*(\^+)\s*(.*)$", line)
 
     if m_arrow or m_caret:
+        assertion_line_count += 1
         if m_arrow:
             col_start, col_end = 0, 1
             spec = m_arrow.group(2).strip()
@@ -610,7 +612,7 @@ for idx, line in enumerate(test_lines):
         last_code_line_no = line_no
         last_code_line = line
 
-print(f"[4/4] State-machine test runner: {assertion_count} column assertions verified across {len(test_lines)} lines")
+print(f"[4/4] State-machine test runner: {assertion_line_count} assertions ({assertion_count} column checks) verified across {len(test_lines)} lines")
 
 if errors:
     print(f"\nFAILED with {len(errors)} error(s):", file=sys.stderr)
