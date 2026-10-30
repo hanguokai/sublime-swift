@@ -1,56 +1,62 @@
-# Swift6 for Sublime Text 4
+# Swift for Sublime Text
 
-Modern, lightweight **Swift 6** syntax highlighting and symbol navigation for **Sublime Text 4**.
+**Swift** syntax highlighting and editor integration for **Sublime Text** (Sublime Text 3 `>=3092` and Sublime Text 4).
 
-Built from scratch using Sublime Text 4's `version: 2` `.sublime-syntax` engine and official [Scope Naming Guidelines](https://www.sublimetext.com/docs/scope_naming.html), providing complete support for Swift 5.7 through Swift 6.x language features.
+Built from the ground up against the official Swift language grammar and lexical specification, this package targets modern Swift (**Swift 5.x – 6.4**), follows Sublime Text's official [Scope Naming Guidelines](https://www.sublimetext.com/docs/scope_naming.html), and runs 100% natively on Sublime Text 4's high-performance `sregex` engine.
 
 ---
 
 ## Features
 
-- **Modern Swift 6 (up to Swift 6.4) Syntax Highlighting**:
-  - **Concurrency & Isolation**: `async`, `await`, `actor`, `distributed actor`, `sending`, `isolated`, `isolated deinit`, `nonisolated`, `nonisolated(unsafe)`, `nonisolated(nonsending)`, `#isolation`, `@isolated(any)`, `@MainActor`, `@Sendable`, `~Sendable`, `Sendable`, `SendableMetatype`, `withTaskCancellationShield`, `withTaskPriorityEscalationHandler`, `withTaskExecutorPreference`, `withDeadline`
-  - **Macros**: `macro` declarations, `@freestanding(expression/declaration)`, `@attached(member/peer/accessor/memberAttribute/extension/body/preamble)`, `#externalMacro`, and freestanding macro expansions (`#expect`, `#require`, `#Preview`, `#Predicate`, etc.)
-  - **Typed Throws**: `throws(ErrorType)`, `do throws(ErrorType)`, `rethrows`
-  - **Ownership, Noncopyable Containers & Accessors**: `~Copyable`, `~Escapable`, `~BitwiseCopyable`, `~Sendable`, `borrowing`, `consuming`, `consume`, `copy`, `discard self`, `unsafe`, `borrow` / `mutate` accessors, `yielding`, `RigidArray`, `InlineArray`, `UniqueArray`, `UniqueBox`, `Span`, `RawSpan`, `MutableSpan`, `MutableRawSpan`, `OutputSpan`, `OutputRawSpan`, `UTF8Span`
-  - **Parameter Packs & InlineArray**: `each T`, `repeat each value`, `[N of Element]` (`InlineArray` sugar)
-  - **Access Control, Availability & Modules**: `package` access level, Swift 6 access-level imports (`public import`, `package import`, `private import`, etc.), `Module::symbol` module selectors, `@available` / `@backDeployed` / `#available` platform & version highlighting (including `anyAppleOS` and `visionOS`), `@retroactive`
-  - **Literals & Comments**: Native regex literals `/.../`, extended multiline regex literals `#/.../#`, raw strings `#"..."#` & interpolations `\#(...)`, multiline strings `"""..."""`, nested block comments `/* /* ... */ */`, and documentation comments `///` / `/** */`
-- **Editor Integration**:
-  - **Comments (`Comments.tmPreferences`)**: Toggle single-line (`Cmd+/`) and block (`Cmd+Opt+/`) comments
-  - **Smart Indentation (`Indentation.tmPreferences`)**: Automatic indentation for `{}`, `[]`, `()`, and `switch` `case` / `default` blocks
-  - **Xcode-style Symbol Navigation (`Symbol List*.tmPreferences`)**:
-    - Jump to `struct`, `class`, `actor`, `enum`, `protocol`, `extension`, `func`, `macro`, `init`, `deinit`, and `subscript` via `Cmd+R` / `Cmd+Shift+R`
-    - Renders `// MARK: - Section` as `— Section —` separator headers in `Cmd+R` (also supports `// MARK:`, `// TODO:`, and `// FIXME:`)
+- **Syntax Highlighting**: Comprehensive, specification-aligned highlighting for **Swift 5.x – 6.4**—covering structured concurrency (`async`/`await`, `actor`, `sending`, `nonisolated`, `#isolation`), macros (`macro`, `@freestanding`, `@attached`, `#expect`, `#Preview`), typed `throws`, ownership and noncopyable types (`~Copyable`, `~Escapable`, `~Sendable`, `borrowing`, `consuming`, `borrow`/`mutate`), parameter packs (`each`/`repeat`), inline arrays (`[N of Type]`), regex literals (`/.../`, `#/.../#`), raw strings (`#"..."#`), and documentation comments (`///`, `/** ... */`).
+- **Comment Toggling**: Single-line (`//`) and block (`/* ... */`) comment toggling via `Cmd+/` / `Ctrl+/` and `Cmd+Opt+/` / `Ctrl+Shift+/`.
+- **Smart Indentation**: Automatic indentation rules for braces, brackets, parentheses, and `switch` `case` / `default` blocks.
+- **Symbol Navigation**: Goto Symbol (`Cmd+R` / `Ctrl+R`) and Goto Symbol in Project (`Cmd+Shift+R` / `Ctrl+Shift+R`) for types, protocols, extensions, functions, macros, initializers, subscripts, and Xcode-style `// MARK:`, `// TODO:`, and `// FIXME:` section headers.
 
 ---
 
 ## Installation
 
-### Via Package Control (Recommended)
-
-1. Open Command Palette (`Cmd+Shift+P` on macOS, `Ctrl+Shift+P` on Windows/Linux).
+1. Open the Command Palette (`Cmd+Shift+P` on macOS, `Ctrl+Shift+P` on Windows/Linux).
 2. Select **`Package Control: Install Package`**.
-3. Search for **`Swift6`** and press Enter.
-
-### Manual Installation (macOS)
-
-```bash
-chmod +x scripts/install_macos.sh
-./scripts/install_macos.sh
-```
+3. Search for **`Swift`** and press Enter.
 
 ---
 
-## Syntax Tests & Verification
+## Local Development & Testing
 
-- **In Sublime Text 4**:
-  1. Open [`tests/syntax_test_swift.swift`](tests/syntax_test_swift.swift) in Sublime Text 4.
-  2. Open Command Palette (`Cmd+Shift+P`) and run **`Build With: Syntax Tests`** (verifies all scope assertions) and **`Build With: Syntax Tests - Regex Compatibility`** (verifies 100% native `sregex` engine compatibility).
-- **From the Command Line**:
-  ```bash
-  ./scripts/verify.sh
-  ```
+1. **Clone and link the repository into Sublime Text (macOS)**:
+   ```bash
+   git clone https://github.com/hanguokai/sublime-swift.git
+   cd sublime-swift
+   ./scripts/install_macos.sh
+   ```
+   *(If `Swift` is already installed via Package Control, linking `Packages/Swift` overrides the packaged version during development.)*
+
+2. **Run the command-line verification suite**:
+   ```bash
+   ./scripts/verify.sh
+   ```
+
+3. **Run Sublime Text's built-in syntax tests**:
+   Open the target file via the `Packages/Swift` symlink path (required by Sublime Text's test runner when the repository folder is not named `Swift`) and run the corresponding build target from the Command Palette (`Cmd+Shift+P`):
+   - **Scope Assertions (`Build With: Syntax Tests`)** — open `tests/syntax_test_swift.swift` to verify all scope assertions in the test suite:
+     ```bash
+     subl "$HOME/Library/Application Support/Sublime Text/Packages/Swift/tests/syntax_test_swift.swift"
+     ```
+   - **Regex Engine Compatibility (`Build With: Syntax Tests - Regex Compatibility`)** — open `Swift.sublime-syntax` to verify 100% native `sregex` engine compatibility:
+     ```bash
+     subl "$HOME/Library/Application Support/Sublime Text/Packages/Swift/Swift.sublime-syntax"
+     ```
+
+---
+
+## History & Legacy Releases
+
+This package succeeds the original [`Swift`](https://github.com/quiqueg/Swift-Sublime-Package) package created by [@quiqueg](https://github.com/quiqueg).
+
+- **Sublime Text 3 (`>=3092`) & Sublime Text 4**: Track the `main` branch (`1.x` releases).
+- **Sublime Text 2 (`<3092`)**: The original 2014–2016 `.tmLanguage` snapshot is preserved on the [`st2` branch](https://github.com/hanguokai/sublime-swift/tree/st2) under tag [`st2-0.0.9`](https://github.com/hanguokai/sublime-swift/releases/tag/st2-0.0.9).
 
 ## License
 
