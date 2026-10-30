@@ -7,7 +7,6 @@ file_extensions:
   - swiftinterface
 first_line_match: '^(?:#!.*\bswift\b|//\s*swift-interface-format-version)'
 scope: source.swift
-version: 2
 
 variables:
   ident_head: '[[:alpha:]_]'

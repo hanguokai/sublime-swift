@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        build: [stable, latest]
+        build: [3211, stable, latest]
     steps:
       - uses: actions/checkout@v4
       - name: Verify spec alignment, sregex compatibility & 100% scope coverage
@@ -24,4 +24,4 @@ jobs:
       - uses: SublimeText/syntax-test-action@v2
         with:
           build: ${{ matrix.build }}
-          package_name: Swift6
+          package_name: Swift
