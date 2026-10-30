@@ -15,7 +15,7 @@
 				\{[^}"']*
 				| \[[^\]"']*
 				| \([^)"']*
-				| \b(case\b.*|default)\s*:
+				| \b(case\b(?:[^/\r\n]|/(?![/*]))*|default)\s*:
 			)
 			\s*(//.*|/\*.*\*/\s*)?$
 		</string>
@@ -26,7 +26,7 @@
 				\}
 				| \]
 				| \)
-				| (\bcase\b.*|\bdefault)\s*:
+				| (\bcase\b(?:[^/\r\n]|/(?![/*]))*|\bdefault)\s*:\s*(//.*|/\*.*\*/\s*)?$
 			)
 		</string>
 		<key>unIndentedLinePattern</key>

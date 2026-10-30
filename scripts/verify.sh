@@ -265,7 +265,9 @@ with open(TEST_FILE, "r", encoding="utf-8") as f:
 if os.path.isfile(os.path.join(SPEC_DIR, "KeywordSpec.swift")):
     with open(os.path.join(SPEC_DIR, "KeywordSpec.swift"), "r", encoding="utf-8") as f:
         kw_spec = f.read()
-    lexer_kws = re.findall(r'name:\s*"([^"]+)"[^)]*isLexerClassified:\s*true', kw_spec, re.S)
+    lexer_kws = re.findall(r'KeywordSpec\(\s*"([^"]+)"[^)]*isLexerClassified:\s*true', kw_spec, re.S)
+    if not lexer_kws:
+        errors.append("Failed to extract any isLexerClassified keywords from KeywordSpec.swift")
     for kw in lexer_kws:
         if kw in ("_",):
             continue
@@ -275,7 +277,9 @@ if os.path.isfile(os.path.join(SPEC_DIR, "KeywordSpec.swift")):
 if os.path.isfile(os.path.join(SPEC_DIR, "TokenSpec.swift")):
     with open(os.path.join(SPEC_DIR, "TokenSpec.swift"), "r", encoding="utf-8") as f:
         tok_spec = f.read()
-    pound_kws = re.findall(r'case\s+\w+\s*=\s*#\.poundKeyword\(text:\s*"#([^"]+)"', tok_spec)
+    pound_kws = re.findall(r'\.poundKeyword\([^)]*text:\s*"#([^"]+)"', tok_spec)
+    if not pound_kws:
+        errors.append("Failed to extract any poundKeyword entries from TokenSpec.swift")
     for pkw in pound_kws:
         if not re.search(r'(?<![A-Za-z0-9_])' + re.escape(pkw) + r'(?![A-Za-z0-9_])', syntax_raw):
             errors.append(f"Pound keyword '#{pkw}' from TokenSpec.swift missing in {SYNTAX_FILE}")
@@ -318,6 +322,7 @@ for feat in required_modern_features:
 
 print(
     f"[2/4] Official Swift spec audit: {len(required_specs)} spec files, "
+    f"{len(lexer_kws)} lexer keywords, {len(pound_kws)} #pound keywords, "
     f"{len(grammar_word_terminals)} grammar terminals, "
     f"{len(required_modern_features)} modern Swift 5.9-6.4 features verified"
 )

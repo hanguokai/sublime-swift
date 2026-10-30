@@ -39,7 +39,7 @@
 ├── Symbol List.tmPreferences          # 符号索引：支持 Cmd+R / Cmd+Shift+R 跳转类型、函数、macro 等
 ├── Symbol List - Marks.tmPreferences  # MARK 导航：在 Cmd+R 中将 // MARK: - xxx 转换为分隔标题
 ├── tests/
-│   └── syntax_test_swift.swift        # 官方格式的自动化语法高亮 Scope 断言测试套件（覆盖 100% 语法文件中定义的 165 个 Scope、共 3,400+ 列断言）
+│   └── syntax_test_swift.swift        # 官方格式的自动化语法高亮 Scope 断言测试套件（覆盖 100% 语法文件中定义的 166 个 Scope、共 3,500+ 列断言）
 ├── scripts/
 │   ├── install_macos.sh               # 本机 macOS Sublime Text 软链接安装脚本
 │   ├── sync_swift_spec.sh             # 从 swiftlang 官方仓库同步最新语法规范与词法表至 doc/spec/
@@ -152,8 +152,8 @@
 `verify.sh` 会在 1 秒内完成四项硬性验证（全部 0 错误才算通过）：
 1. **语法结构与 `sregex` 兼容性检查**：验证所有变量展开、上下文引用完整性，并确保 0 个后行断言（`(?<=` / `(?<!`）和 0 个反向引用（`\1`..`\9`）。
 2. **官方规范对齐审计**：自动解析 `doc/spec/SummaryOfTheGrammar.md`（提取全部 135 个 EBNF 词法终结符 `` **`...`** ``）、`doc/spec/KeywordSpec.swift`（所有 `isLexerClassified: true` 关键字）、`doc/spec/TokenSpec.swift`（所有 `#pound` 关键字）以及 Swift 5.9–6.4 新增特性清单，校验它们在 `Swift.sublime-syntax` 与 `tests/syntax_test_swift.swift` 中无一遗漏。
-3. **100% Scope 覆盖率检查**：提取 `Swift.sublime-syntax` 中定义的全部 165 个 Scope，强制要求每一个 Scope 在 `tests/syntax_test_swift.swift` 中至少有一条断言覆盖。
-4. **`.sublime-syntax` 状态机全量断言模拟**：在本地精确模拟 Sublime Text 的 `push`/`pop`/`set`/`include`/`meta_scope`/`meta_content_scope`/`clear_scopes` 状态机，对 `tests/syntax_test_swift.swift` 中的 3,400+ 个列级正向/负向 Scope 断言逐一校验。
+3. **100% Scope 覆盖率检查**：提取 `Swift.sublime-syntax` 中定义的全部 166 个 Scope，强制要求每一个 Scope 在 `tests/syntax_test_swift.swift` 中至少有一条断言覆盖。
+4. **`.sublime-syntax` 状态机全量断言模拟**：在本地精确模拟 Sublime Text 的 `push`/`pop`/`set`/`include`/`meta_scope`/`meta_content_scope`/`clear_scopes` 状态机，对 `tests/syntax_test_swift.swift` 中的 3,500+ 个列级正向/负向 Scope 断言逐一校验。
 
 ### 3. 本地安装与 GitHub Actions CI
 - **本地开发模式**：运行 `./scripts/install_macos.sh` 会在 `~/Library/Application Support/Sublime Text/Packages/Swift` 创建指向本仓库的软链接。修改仓库中的文件保存后，Sublime Text 会**实时热重载**。

@@ -14,9 +14,9 @@ variables:
   ident_char: '[[:alnum:]_]'
   ident: '(?:{{ident_head}}{{ident_char}}*|`[^`\\\r\n]+`)'
   type_ident: '[A-Z]{{ident_char}}*'
-  operator_char: '[+\-*/%=<>!&|^~.?¡-§©«¬®°-±¶»¿×÷‖-‗†-‧‰-‾⁄-⁓⁕-⁞←-⏿─-❵➔-⯿⸀-⹿、-〃〈-〠〰]'
+  operator_char: '[+\-*/%=<>!&|^~.?¡-§©«¬®°-±¶»¿×÷‖-‗†-‧‰-‾⁁-⁓⁕-⁞←-⏿─-❵➔-⯿⸀-⹿、-〃〈-〠〰]'
   # Operator characters excluding '.', which only continues dot-operators (e.g. '..<'); 'a==.none' lexes as '==' '.none'
-  operator_nodot_char: '[+\-*/%=<>!&|^~?¡-§©«¬®°-±¶»¿×÷‖-‗†-‧‰-‾⁄-⁓⁕-⁞←-⏿─-❵➔-⯿⸀-⹿、-〃〈-〠〰]'
+  operator_nodot_char: '[+\-*/%=<>!&|^~?¡-§©«¬®°-±¶»¿×÷‖-‗†-‧‰-‾⁁-⁓⁕-⁞←-⏿─-❵➔-⯿⸀-⹿、-〃〈-〠〰]'
   # Reserved keywords that Swift allows as argument/parameter labels (all except inout/var/let)
   label_keyword: '(?:default|case|if|else|guard|switch|where|for|in|while|repeat|break|continue|fallthrough|return|defer|do|try|catch|throw|throws|rethrows|await|import|class|struct|enum|protocol|extension|func|typealias|associatedtype|static|public|private|fileprivate|internal|open|package|operator|precedencegroup|deinit|subscript|async|nonisolated)'
   decl_follow: '\s+(?:@{{ident_head}}{{ident_char}}*(?:\((?:[^()]|\([^)]*\))*\))?\s+|(?:(?:open|public|package|internal|fileprivate|private)(?:\s*\(\s*set\s*\))?|final|static|class|distributed|isolated|nonisolated(?:\([^)]*\))?|indirect|convenience|required|override|mutating|nonmutating|borrowing|consuming|optional|dynamic|lazy|weak|unowned(?:\([^)]*\))?|prefix|postfix|infix)\s+)*(?:import|let|var|func|macro|struct|class|enum|case|actor|protocol|extension|typealias|associatedtype|init|deinit|subscript|operator|precedencegroup)\b'
@@ -343,7 +343,7 @@ contexts:
         2: entity.name.function.macro.swift
 
     # Function declaration (identifier or operator function, plus keyword fallback)
-    - match: '\b(func)\s+({{ident}}|{{operator_char}}+)'
+    - match: '\b(func)\s+({{ident}}|\.(?:\.|{{operator_nodot_char}})+|{{operator_nodot_char}}+)'
       scope: meta.declaration.function.swift
       captures:
         1: storage.type.function.swift
@@ -501,29 +501,34 @@ contexts:
       scope: storage.modifier.swift
 
     # Operator & Precedencegroup declarations and attributes
-    - match: '\b(operator)\s+({{operator_char}}+)'
+    - match: '\b(operator)\s+(\.(?:\.|{{operator_nodot_char}})+|{{operator_nodot_char}}+)'
       scope: meta.declaration.operator.swift
       captures:
         1: storage.type.operator.swift
         2: entity.name.function.operator.swift
 
-    - match: '\b(precedencegroup)\s+({{ident}})'
+    - match: '\b(precedencegroup)\s+({{ident}})\b(?!\s*:)'
       scope: meta.declaration.precedencegroup.swift
       captures:
         1: storage.type.operator.swift
         2: entity.name.type.precedencegroup.swift
+      push:
+        - match: '\}'
+          scope: punctuation.section.block.end.swift
+          pop: true
+        - include: comments
+        - match: '\b(associativity)\s*(:)\s*\b(left|right|none)\b'
+          captures:
+            1: keyword.other.operator.precedence.swift
+            2: punctuation.separator.colon.swift
+            3: constant.language.precedence.swift
+        - match: '\b(higherThan|lowerThan|associativity|assignment)\b(?=\s*:)'
+          scope: keyword.other.operator.precedence.swift
+        - include: expressions
+        - include: punctuation
 
     - match: '\b(operator|precedencegroup)\b(?!\s*:)'
       scope: storage.type.operator.swift
-
-    - match: '\b(associativity)\s*(:)\s*\b(left|right|none)\b'
-      captures:
-        1: keyword.other.operator.precedence.swift
-        2: punctuation.separator.colon.swift
-        3: constant.language.precedence.swift
-
-    - match: '\b(higherThan|lowerThan|associativity|assignment)\b(?=\s*:)'
-      scope: keyword.other.operator.precedence.swift
 
   # ============================================================================
   # Statements & Control Flow (including Swift 6 Typed Throws & Suppressed ~Copyable)
@@ -983,7 +988,7 @@ contexts:
         2: keyword.operator.arithmetic.swift
 
     # Built-in Standard Library, Concurrency, Observation, and Synchronization types
-    - match: '\b(?:Int|Int8|Int16|Int32|Int64|Int128|UInt|UInt8|UInt16|UInt32|UInt64|UInt128|Float|Float16|Float32|Float64|Float80|Double|Bool|String|Substring|Character|UnicodeScalar|StaticString|Array|InlineArray|RigidArray|UniqueArray|UniqueBox|Span|RawSpan|MutableSpan|MutableRawSpan|OutputSpan|OutputRawSpan|UTF8Span|Ref|MutableRef|Dictionary|Set|RangeSet|DiscontiguousSlice|Optional|Result|Range|ClosedRange|PartialRangeFrom|PartialRangeThrough|PartialRangeUpTo|Regex|AnyRegexOutput|RegexComponent|Error|EncodingError|DecodingError|CancellationError|Never|Void|Any|AnyObject|AnyClass|AnyHashable|AnyKeyPath|PartialKeyPath|KeyPath|WritableKeyPath|ReferenceWritableKeyPath|Sendable|SendableMetatype|Copyable|Escapable|BitwiseCopyable|Equatable|Hashable|Comparable|Codable|Encodable|Decodable|Identifiable|CustomStringConvertible|CustomDebugStringConvertible|Sequence|Collection|BidirectionalCollection|RandomAccessCollection|RangeReplaceableCollection|IteratorProtocol|Iterable|BorrowingIteratorProtocol|AsyncSequence|AsyncIteratorProtocol|AsyncStream|AsyncThrowingStream|Task|TaskGroup|ThrowingTaskGroup|DiscardingTaskGroup|ThrowingDiscardingTaskGroup|MainActor|GlobalActor|Actor|DistributedActor|DistributedActorSystem|SerialExecutor|TaskExecutor|Executor|Clock|InstantProtocol|ContinuousClock|SuspendingClock|Duration|Instant|CheckedContinuation|UnsafeContinuation|OpaquePointer|UnsafePointer|UnsafeMutablePointer|UnsafeRawPointer|UnsafeMutableRawPointer|UnsafeBufferPointer|UnsafeMutableBufferPointer|AutoreleasingUnsafeMutablePointer|Unmanaged|ObservationRegistrar|Mutex|Atomic|AtomicLazyReference|WordPair)\b'
+    - match: '\b(?:Int|Int8|Int16|Int32|Int64|Int128|UInt|UInt8|UInt16|UInt32|UInt64|UInt128|Float|Float16|Float32|Float64|Float80|Double|Bool|String|Substring|Character|UnicodeScalar|StaticString|Array|InlineArray|RigidArray|UniqueArray|UniqueBox|Span|RawSpan|MutableSpan|MutableRawSpan|OutputSpan|OutputRawSpan|UTF8Span|Ref|MutableRef|Dictionary|Set|RangeSet|DiscontiguousSlice|Optional|Result|Range|ClosedRange|PartialRangeFrom|PartialRangeThrough|PartialRangeUpTo|Regex|AnyRegexOutput|RegexComponent|Error|EncodingError|DecodingError|CancellationError|Never|Void|Any|AnyObject|AnyClass|AnyHashable|AnyKeyPath|PartialKeyPath|KeyPath|WritableKeyPath|ReferenceWritableKeyPath|Sendable|SendableMetatype|Copyable|Escapable|BitwiseCopyable|Equatable|Hashable|Comparable|Codable|Encodable|Decodable|Identifiable|CustomStringConvertible|CustomDebugStringConvertible|Sequence|Collection|BidirectionalCollection|RandomAccessCollection|RangeReplaceableCollection|IteratorProtocol|CaseIterable|Iterable|BorrowingIteratorProtocol|AsyncSequence|AsyncIteratorProtocol|AsyncStream|AsyncThrowingStream|Task|TaskGroup|ThrowingTaskGroup|DiscardingTaskGroup|ThrowingDiscardingTaskGroup|MainActor|GlobalActor|Actor|DistributedActor|DistributedActorSystem|SerialExecutor|TaskExecutor|Executor|Clock|InstantProtocol|ContinuousClock|SuspendingClock|Duration|Instant|CheckedContinuation|UnsafeContinuation|OpaquePointer|UnsafePointer|UnsafeMutablePointer|UnsafeRawPointer|UnsafeMutableRawPointer|UnsafeBufferPointer|UnsafeMutableBufferPointer|AutoreleasingUnsafeMutablePointer|Unmanaged|ObservationRegistrar|Mutex|Atomic|AtomicLazyReference|WordPair)\b'
       scope: support.type.swift
 
     # General UpperCamelCase Type Identifier
@@ -1050,6 +1055,10 @@ contexts:
     - match: '\b(is|as)\b(?!\s*:)'
       scope: keyword.operator.word.cast.swift
 
+    # Key-path expression: \Type.property, \.property, \[Int].[0]
+    - match: '\\(?=\s*(?:{{ident}}|\.|\[|\())'
+      scope: keyword.operator.key-path.swift
+
     # Return arrow ->
     - match: '->'
       scope: punctuation.separator.return-type.swift
@@ -1071,9 +1080,13 @@ contexts:
       captures:
         1: keyword.operator.comparison.swift
 
-    # Custom multi-character or Unicode operators (e.g., '<=>', '==>', '√', '±')
-    - match: '(?:(?:===|!==|==|!=|<=|>=|~=){{operator_nodot_char}}+|[¡-§©«¬®°-±¶»¿×÷‖-‗†-‧‰-‾⁄-⁓⁕-⁞←-⏿─-❵➔-⯿⸀-⹿、-〃〈-〠〰]{{operator_nodot_char}}*)'
+    # Custom multi-character, dot, or Unicode operators (e.g., '<=>', '==>', '.+.', '|>', '<|>', '√', '±')
+    - match: '(?:(?:===|!==|==|!=|<=|>=|~=){{operator_nodot_char}}+|\.(?:\.|{{operator_nodot_char}})+|[¡-§©«¬®°-±¶»¿×÷‖-‗†-‧‰-‾⁁-⁓⁕-⁞←-⏿─-❵➔-⯿⸀-⹿、-〃〈-〠〰]{{operator_nodot_char}}*)'
       scope: keyword.operator.custom.swift
+
+    - match: '[ \t]+((?!(?:->|<<|>>|<=|>=|<<=|>>=|&<<|&>>|&<<=|&>>=)(?!{{operator_nodot_char}}))(?:[<>]{{operator_nodot_char}}+|{{operator_nodot_char}}+[<>]{{operator_nodot_char}}*))(?=[ \t]+)'
+      captures:
+        1: keyword.operator.custom.swift
 
     # Logical operators: &&, ||, !
     - match: '&&|\|\||!'

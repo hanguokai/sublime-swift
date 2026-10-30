@@ -1052,4 +1052,33 @@ if case .a = x, case .b = y {}
    Still in outer comment */
 // ^^^^^^^^^^^^^^^^^^^^^^ comment.block.swift
 
+infix operator ⁂: ExponentiationPrecedence
+//             ^ meta.declaration.operator.swift entity.name.function.operator.swift
+infix operator .+.
+//             ^^^ meta.declaration.operator.swift entity.name.function.operator.swift
+
+enum Direction: CaseIterable {
+//              ^^^^^^^^^^^^ support.type.swift
+    case north, south
+}
+
+func testKeyPathsAndCustomOps(_ a: Int, _ b: Int, assignment: Int, higherThan: Int) -> Int {
+//                                                ^^^^^^^^^^ - keyword.other.operator.precedence.swift
+//                                                                 ^^^^^^^^^^ - keyword.other.operator.precedence.swift
+    let kp1 = \String.count
+//            ^ keyword.operator.key-path.swift
+//             ^^^^^^ support.type.swift
+    let kp2: KeyPath<String, Int> = \.count
+//                                  ^ keyword.operator.key-path.swift
+//                                   ^ punctuation.accessor.dot.swift
+    _ = (kp1, kp2, a <|> b, a |> b, a .+. b)
+//                   ^^^ keyword.operator.custom.swift
+//                            ^^ keyword.operator.custom.swift
+//                                    ^^^ keyword.operator.custom.swift
+    return testKeyPathsAndCustomOps(a, b, assignment: 1, higherThan: 2)
+//                                        ^^^^^^^^^^ - keyword.other.operator.precedence.swift
+//                                                       ^^^^^^^^^^ - keyword.other.operator.precedence.swift
+}
+
+
 
