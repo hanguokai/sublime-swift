@@ -39,7 +39,7 @@
 ├── Symbol List.tmPreferences          # 符号索引：支持 Cmd+R / Cmd+Shift+R 跳转类型、函数、macro 等
 ├── Symbol List - Marks.tmPreferences  # MARK 导航：在 Cmd+R 中将 // MARK: - xxx 转换为分隔标题
 ├── tests/
-│   └── syntax_test_swift.swift        # 官方格式的自动化语法高亮 Scope 断言测试套件（覆盖 100% 语法文件中定义的 158 个 Scope、共 3,100+ 列断言）
+│   └── syntax_test_swift.swift        # 官方格式的自动化语法高亮 Scope 断言测试套件（覆盖 100% 语法文件中定义的 165 个 Scope、共 3,400+ 列断言）
 ├── scripts/
 │   ├── install_macos.sh               # 本机 macOS Sublime Text 软链接安装脚本
 │   ├── sync_swift_spec.sh             # 从 swiftlang 官方仓库同步最新语法规范与词法表至 doc/spec/
@@ -87,9 +87,9 @@
 
 ---
 
-## 三、Sublime Text 4 语法编写四大实战避坑经验
+## 三、Sublime Text 4 语法编写五大实战避坑经验
 
-在开发与 CI 验证过程中，我们总结了编写高质量 `.sublime-syntax` 的四条核心准则（后续修改语法时务必遵守）：
+在开发与 CI 验证过程中，我们总结了编写高质量 `.sublime-syntax` 的五条核心准则（后续修改语法时务必遵守）：
 
 ### 1. 严禁使用后行断言（`(?<=...)` 或 `(?<!...)`）
 - **原因**：Sublime Text 4 拥有极其快速的原生正则引擎 `sregex`，但 **`sregex` 不支持任何正向或负向后行断言**。一旦语法文件中某条规则出现 `(?<=` 或 `(?<!`，Sublime Text 会被迫将该规则回退到较慢的旧版 Oniguruma 引擎（这也是 Package Control 官方审核员重点检查的性能指标）。
@@ -120,6 +120,13 @@
 ### 4. 原始字符串使用显式分支，不使用 `\1` 反向引用
 - 为了保证 100% 兼容 `sregex` DFA 引擎（`sregex` 不支持反向引用 `\1`），`#"..."#`、`##"..."##`、`###+"..."###+` 均按 `#` 的数量写成显式分支，并通过 `./scripts/verify.sh` 强制拦截任何 `\1`..`\9` 反向引用。
 
+### 5. 负向先行断言不能直接跟在变长捕获后面；关键字标签只用“前置分隔符”识别
+- **案例（V2 审查修复过程中出现过的回归）**：曾给 `\b(enum)\s+({{ident}})(?!\s*:\s*[^{};\r\n]*\))` 这类规则加负向先行断言，想排除参数标签。结果正则引擎通过**回溯缩短 `{{ident}}`** 来让断言成立，`enum Kind: String // (a, b)` 被高亮成类型名 `Kin`，并污染了符号索引。
+- **准则**：
+  1. 不要在 `({{ident}})` 这类变长捕获后面紧跟负向断言，除非断言本身以 `\b` 或必然失败的字符开头。
+  2. 关键字作为参数/实参标签（`f(default: 1)`、`dict[k, default: 0]`、`func f(in ctx: C, class k: Int)`）统一由 `declarations` 顶部的一条规则处理：消费前置的 `(` / `[` / `,`，再匹配 `{{label_keyword}}`。**不要**给 `case`、`where`、`default`、`each` 等关键字加“同一行后面有 `)`”之类的启发式断言，否则 `case foo: f()`、`default: print(x)`、`<each T: P>(...)`、`where T == (A, B)` 都会丢失高亮。
+  3. 已知限制：多行参数列表中，位于行首的 `class k: Int` / `for item: T` 这类标签无法与声明或语句区分（`in` 和 `default` 除外，因为 `in x:` / `default x:` 不可能是合法语句）。
+
 ---
 
 ## 四、以官方规范与确定性测试为准绳的维护工作流（Spec-Driven Workflow）
@@ -145,8 +152,8 @@
 `verify.sh` 会在 1 秒内完成四项硬性验证（全部 0 错误才算通过）：
 1. **语法结构与 `sregex` 兼容性检查**：验证所有变量展开、上下文引用完整性，并确保 0 个后行断言（`(?<=` / `(?<!`）和 0 个反向引用（`\1`..`\9`）。
 2. **官方规范对齐审计**：自动解析 `doc/spec/SummaryOfTheGrammar.md`（提取全部 135 个 EBNF 词法终结符 `` **`...`** ``）、`doc/spec/KeywordSpec.swift`（所有 `isLexerClassified: true` 关键字）、`doc/spec/TokenSpec.swift`（所有 `#pound` 关键字）以及 Swift 5.9–6.4 新增特性清单，校验它们在 `Swift.sublime-syntax` 与 `tests/syntax_test_swift.swift` 中无一遗漏。
-3. **100% Scope 覆盖率检查**：提取 `Swift.sublime-syntax` 中定义的全部 158 个 Scope，强制要求每一个 Scope 在 `tests/syntax_test_swift.swift` 中至少有一条断言覆盖。
-4. **`.sublime-syntax` 状态机全量断言模拟**：在本地精确模拟 Sublime Text 的 `push`/`pop`/`set`/`include`/`meta_scope`/`meta_content_scope` 状态机，对 `tests/syntax_test_swift.swift` 中的 3,100+ 个列级正向/负向 Scope 断言逐一校验。
+3. **100% Scope 覆盖率检查**：提取 `Swift.sublime-syntax` 中定义的全部 165 个 Scope，强制要求每一个 Scope 在 `tests/syntax_test_swift.swift` 中至少有一条断言覆盖。
+4. **`.sublime-syntax` 状态机全量断言模拟**：在本地精确模拟 Sublime Text 的 `push`/`pop`/`set`/`include`/`meta_scope`/`meta_content_scope`/`clear_scopes` 状态机，对 `tests/syntax_test_swift.swift` 中的 3,400+ 个列级正向/负向 Scope 断言逐一校验。
 
 ### 3. 本地安装与 GitHub Actions CI
 - **本地开发模式**：运行 `./scripts/install_macos.sh` 会在 `~/Library/Application Support/Sublime Text/Packages/Swift` 创建指向本仓库的软链接。修改仓库中的文件保存后，Sublime Text 会**实时热重载**。

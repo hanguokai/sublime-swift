@@ -232,7 +232,8 @@ extension BinaryTree.Node {
 }
 
 precedencegroup ExponentiationPrecedence {
-// ^^^^^^^^^^^^ storage.type.operator.swift
+// ^^^^^^^^^^^^ meta.declaration.precedencegroup.swift storage.type.operator.swift
+//              ^^^^^^^^^^^^^^^^^^^^^^^^ meta.declaration.precedencegroup.swift entity.name.type.precedencegroup.swift
     higherThan: MultiplicationPrecedence
 //  ^^^^^^^^^^ keyword.other.operator.precedence.swift
     associativity: right
@@ -244,14 +245,16 @@ precedencegroup ExponentiationPrecedence {
 }
 infix operator **: ExponentiationPrecedence
 // ^^ storage.modifier.swift
-//    ^^^^^^^^ storage.type.operator.swift
-//             ^^ keyword.operator.arithmetic.swift
+//    ^^^^^^^^ meta.declaration.operator.swift storage.type.operator.swift
+//             ^^ meta.declaration.operator.swift entity.name.function.operator.swift
 prefix operator +++
 // ^^^ storage.modifier.swift
-//     ^^^^^^^^ storage.type.operator.swift
+//     ^^^^^^^^ meta.declaration.operator.swift storage.type.operator.swift
+//              ^^^ meta.declaration.operator.swift entity.name.function.operator.swift
 postfix operator ---
 // ^^^^ storage.modifier.swift
-//      ^^^^^^^^ storage.type.operator.swift
+//      ^^^^^^^^ meta.declaration.operator.swift storage.type.operator.swift
+//               ^^^ meta.declaration.operator.swift entity.name.function.operator.swift
 
 // MARK: - Ownership & Noncopyable Types (~Copyable, ~Escapable)
 package struct UniqueResource<T: ~Copyable>: ~Copyable, Sendable {
@@ -512,30 +515,43 @@ func testLiterals() {
     let flt = 3.14159e-2
 //            ^^^^^^^^^^ constant.numeric.float.decimal.swift
     let msg = "Hello\n\u{1F600}, \(bin + (1 + 2))!"
-//            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ string.quoted.double.swift
+//            ^^^^^^^^^^^^^^^^^^^ string.quoted.double.swift - meta.interpolation
 //                  ^^ constant.character.escape.swift
 //                    ^^^^^^^^^ constant.character.escape.swift
-//                               ^^ punctuation.section.interpolation.begin.swift
-//                                 ^^^^^^^^^^^^^ meta.interpolation.swift
-//                                              ^ punctuation.section.interpolation.end.swift
+//                               ^^ meta.interpolation.swift punctuation.section.interpolation.begin.swift - string
+//                                 ^^^^^^^^^^^^^ meta.interpolation.swift source.swift.embedded.swift - string
+//                                              ^ meta.interpolation.swift punctuation.section.interpolation.end.swift - string
+//                                               ^^ string.quoted.double.swift - meta.interpolation
     let raw = #"Raw \#n \#u{1F600} with \#(hex) value"#
-//            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ string.quoted.double.raw.swift
+//            ^^^^^^^^^^^^^^^^^^^^^^^^^^ string.quoted.double.raw.swift - meta.interpolation
 //                  ^^^ constant.character.escape.swift
 //                      ^^^^^^^^^^ constant.character.escape.swift
-//                                      ^^^ punctuation.section.interpolation.begin.swift
+//                                      ^^^ meta.interpolation.swift punctuation.section.interpolation.begin.swift - string
+//                                         ^^^ meta.interpolation.swift source.swift.embedded.swift - string
+//                                            ^ meta.interpolation.swift punctuation.section.interpolation.end.swift - string
+//                                             ^^^^^^^^ string.quoted.double.raw.swift - meta.interpolation
     let raw2 = ##"Raw2 \##n \##(hex)"##
-//             ^^^^^^^^^^^^^^^^^^^^^^^^ string.quoted.double.raw.swift
+//             ^^^^^^^^^^^^^ string.quoted.double.raw.swift - meta.interpolation
 //                     ^^^^ constant.character.escape.swift
-//                          ^^^^ punctuation.section.interpolation.begin.swift
+//                          ^^^^ meta.interpolation.swift punctuation.section.interpolation.begin.swift - string
+//                              ^^^ meta.interpolation.swift source.swift.embedded.swift - string
+//                                 ^ meta.interpolation.swift punctuation.section.interpolation.end.swift - string
+//                                  ^^^ string.quoted.double.raw.swift - meta.interpolation
     let raw3 = ###"Raw3 \###n \###(hex)"###
-//             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ string.quoted.double.raw.swift
+//             ^^^^^^^^^^^^^^^ string.quoted.double.raw.swift - meta.interpolation
 //                      ^^^^^ constant.character.escape.swift
-//                            ^^^^^ punctuation.section.interpolation.begin.swift
+//                            ^^^^^ meta.interpolation.swift punctuation.section.interpolation.begin.swift - string
+//                                 ^^^ meta.interpolation.swift source.swift.embedded.swift - string
+//                                    ^ meta.interpolation.swift punctuation.section.interpolation.end.swift - string
+//                                     ^^^^ string.quoted.double.raw.swift - meta.interpolation
 
     let multi = """
 //              ^^^ punctuation.definition.string.begin.swift
         Line 1 \(bin)
-//      ^^^^^^^^^^^^^ string.quoted.triple.swift
+//      ^^^^^^^ string.quoted.triple.swift - meta.interpolation
+//             ^^ meta.interpolation.swift punctuation.section.interpolation.begin.swift - string
+//               ^^^ meta.interpolation.swift source.swift.embedded.swift - string
+//                  ^ meta.interpolation.swift punctuation.section.interpolation.end.swift - string
         """
 //      ^^^ punctuation.definition.string.end.swift
 
@@ -543,7 +559,10 @@ func testLiterals() {
 //                 ^ punctuation.definition.string.begin.raw.swift
 //                  ^^^ punctuation.definition.string.begin.swift
         Raw multiline \#(oct)
-//      ^^^^^^^^^^^^^^^^^^^^^ string.quoted.triple.raw.swift
+//      ^^^^^^^^^^^^^^ string.quoted.triple.raw.swift - meta.interpolation
+//                    ^^^ meta.interpolation.swift punctuation.section.interpolation.begin.swift - string
+//                       ^^^ meta.interpolation.swift source.swift.embedded.swift - string
+//                          ^ meta.interpolation.swift punctuation.section.interpolation.end.swift - string
         """#
 //      ^^^ punctuation.definition.string.end.swift
 //         ^ punctuation.definition.string.end.raw.swift
@@ -738,7 +757,7 @@ import Synchronization
 //                                      ^^^^^^^^^^ support.constant.attribute.availability.swift
 //                                                        ^^^^^^^^^^ support.constant.attribute.availability.swift
 //                                                                    ^^^^^^^ support.constant.attribute.availability.swift
-//                                                                             ^ keyword.operator.arithmetic.swift
+//                                                                             ^ meta.availability.swift constant.language.wildcard.swift - keyword.operator.arithmetic.swift
 public class NonSendableToken: ~Sendable {
 //           ^^^^^^^^^^^^^^^^ entity.name.type.class.swift
 //                             ^ meta.generic-constraint.suppressed.swift keyword.operator.tilde.suppressed.swift
@@ -783,7 +802,7 @@ public class NonSendableToken: ~Sendable {
 //  ^^^^^^^^^^ meta.availability.swift support.constant.directive.swift
 //                   ^^^^^^^^^^^^^^^^^^^^ comment.line.double-slash.swift
     *
-//  ^ meta.availability.swift keyword.operator.arithmetic.swift
+//  ^ meta.availability.swift constant.language.wildcard.swift - keyword.operator.arithmetic.swift
 )
 @backDeployed(before: anyAppleOS 26.0)
 // ^^^^^^^^^^ meta.annotation.swift variable.annotation.swift
@@ -882,9 +901,155 @@ let unclosedEsc = "unterminated \
 //                               ^ invalid.illegal.unclosed-string.swift
 let afterUnclosed = 42
 // <- storage.type.property.swift - string.quoted.double.swift
+let unclosedInterp = "unterminated \((1 + 2
+//                                 ^^ meta.interpolation.swift punctuation.section.interpolation.begin.swift - string
+//                                   ^^^^^^ meta.interpolation.swift source.swift.embedded.swift - string
+//                                         ^ invalid.illegal.unclosed-string.swift
+let afterUnclosedInterp = 99
+// <- storage.type.property.swift - string.quoted.double.swift - meta.interpolation.swift
+let unclosedInterpQuote = "x\(foo"
+//                          ^^ meta.interpolation.swift punctuation.section.interpolation.begin.swift - string
+//                            ^^^ meta.interpolation.swift source.swift.embedded.swift - string
+//                               ^ string.quoted.double.swift punctuation.definition.string.end.swift - meta.interpolation
+let afterUnclosedInterpQuote = 100
+// <- storage.type.property.swift - string.quoted.double.swift - meta.interpolation.swift
+
+// MARK: - V2 Review Regressions (Nested Generics, Keyword Labels, Custom Operators & Extensions)
+infix operator <=>: ExponentiationPrecedence
+// ^^ storage.modifier.swift
+//    ^^^^^^^^ meta.declaration.operator.swift storage.type.operator.swift
+//             ^^^ meta.declaration.operator.swift entity.name.function.operator.swift
+prefix operator √
+// ^^^ storage.modifier.swift
+//     ^^^^^^^^ meta.declaration.operator.swift storage.type.operator.swift
+//              ^ meta.declaration.operator.swift entity.name.function.operator.swift
+
+prefix func √(x: Double) -> Double { x }
+// ^^^ storage.modifier.swift
+//     ^^^^ meta.declaration.function.swift storage.type.function.swift
+//          ^ meta.declaration.function.swift entity.name.function.swift
+
+func <=> (lhs: Int, rhs: Int) -> Int { lhs - rhs }
+// ^ meta.declaration.function.swift storage.type.function.swift
+//   ^^^ meta.declaration.function.swift entity.name.function.swift
+
+extension [String] {
+// ^^^^^^ meta.declaration.type.extension.swift storage.type.extension.swift
+//        ^ punctuation.section.brackets.begin.swift
+//         ^^^^^^ support.type.swift
+//               ^ punctuation.section.brackets.end.swift
+}
+
+extension SwiftUI::View {
+// ^^^^^^ meta.declaration.type.extension.swift storage.type.extension.swift
+//        ^^^^^^^^^^^^^ meta.declaration.type.extension.swift entity.name.type.extension.swift
+//               ^^ punctuation.accessor.module.swift
+}
+
+class EdgeCaseClass {
+    class final func typeMethod() {}
+//  ^^^^^ storage.modifier.swift - meta.declaration.type.class.swift
+//        ^^^^^ storage.modifier.swift - entity.name.type.class.swift
+//              ^^^^ meta.declaration.function.swift storage.type.function.swift
+//                   ^^^^^^^^^^ meta.declaration.function.swift entity.name.function.swift
+}
+
+func testKeywordLabels(default: Int, case c: Int, class k: Int, in y: Int) -> Int {
+//                     ^^^^^^^ - keyword
+//                                   ^^^^ - keyword
+//                                                ^^^^^ - storage - meta.declaration.type.class.swift
+//                                                      ^ - entity.name
+//                                                              ^^ - keyword.control.loop.swift
+    let nestedDict: Dictionary<String, Array<Int>> = [:]
+//                                              ^^ - keyword.operator.bitwise.swift
+    let nestedSet = Set<Set<Int>>()
+//                             ^^ - keyword.operator.bitwise.swift
+    let shifted = 16 >> 2
+//                   ^^ keyword.operator.bitwise.swift
+    var counts: [String: Int] = [:]
+    counts["a", default: 0] += 1
+//              ^^^^^^^ - keyword.control.conditional.swift
+    let async = 1
+//      ^^^^^ - storage.modifier.async.swift
+    let get = 2
+//      ^^^ - keyword.other.accessor.swift
+    if async < get && get > 0 && (1...5 ~= async) {
+//           ^ keyword.operator.comparison.swift
+//                        ^ keyword.operator.comparison.swift
+//                                      ^^ keyword.operator.comparison.swift
+        _ = (nestedDict, nestedSet, shifted, √4.0, 1 <=> 2)
+//                                           ^ keyword.operator.custom.swift
+//                                                   ^^^ keyword.operator.custom.swift
+    }
+    return get
+//         ^^^ - keyword.other.accessor.swift
+}
+
+// MARK: - V2 Fix Review Regressions (label heuristics must not break switch/case, packs, where, or type names)
+func testLabelHeuristicRegressions(value: Int, opt: Int?) {
+    switch value {
+    case kMax: print("max")
+//  ^^^^ keyword.control.conditional.swift
+    default: print("other")
+//  ^^^^^^^ keyword.control.conditional.swift
+    }
+    switch value { case 1: f(); default: g() }
+//                 ^^^^ keyword.control.conditional.swift
+//                              ^^^^^^^ keyword.control.conditional.swift
+    switch value {
+    default: total = 1
+//  ^^^^^^^ keyword.control.conditional.swift
+    }
+    let isNone = opt==.none
+//                  ^^ keyword.operator.comparison.swift - keyword.operator.assignment
+    let bounded = value<=.max
+//                     ^^ keyword.operator.comparison.swift - keyword.operator.custom
+    _ = (isNone, bounded)
+}
+
+func allEqual<each T: Equatable>(_ lhs: repeat each T, _ rhs: repeat each T) -> Bool { true }
+//            ^^^^ keyword.operator.pack.swift
+func pair<T>(_ a: T) -> T where T: Hashable, T.Element == (Int, Int)
+//                        ^^^^^ keyword.control.conditional.swift
+
+enum Kind: String // values (a, b)
+//   ^^^^ entity.name.type.enum.swift
+//       ^ - entity.name
+protocol Store: AnyObject where Item == (Int, Int)
+//       ^^^^^ entity.name.type.protocol.swift
+//            ^ - entity.name
+
+func labelKeywords(class key: Int, struct item: Int, in context: Int, default value: Int) {}
+//                 ^^^^^^^^^ - storage - entity.name
+//                                 ^^^^^^^^^^^ - storage - entity.name
+//                                                   ^^ - keyword
+//                                                                    ^^^^^^^ - keyword
+func multilineLabels(
+    class key: Int,
+//  ^^^^^^^^^ - storage - entity.name
+    struct item: Int,
+//  ^^^^^^^^^^^ - storage - entity.name
+    case kind: Int,
+//  ^^^^ - keyword
+    where pred: Bool,
+//  ^^^^^ - keyword
+    in context: Int,
+//  ^^ - keyword
+    default value: Int = 0
+//  ^^^^^^^ - keyword
+) {}
+let labeledTuple: (in: Int, for: Int) = (in: 1, for: 2)
+//                 ^^ - keyword
+//                          ^^^ - keyword
+let interpLabel = "\(value, default: 0) \(foo(default: 1))"
+//                          ^^^^^^^ - keyword
+//                                            ^^^^^^^ - keyword
+if case .a = x, case .b = y {}
+//              ^^^^ keyword.control.conditional.swift
 
 /* Outer block comment
    /* Nested block comment */
    Still in outer comment */
 // ^^^^^^^^^^^^^^^^^^^^^^ comment.block.swift
+
 

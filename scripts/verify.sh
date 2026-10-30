@@ -46,7 +46,7 @@ def scalar_val(k, v):
         return True
     if v == "false":
         return False
-    if k == "pop" and str(v).isdigit():
+    if k in ("pop", "clear_scopes") and str(v).isdigit():
         return int(v)
     return v
 
@@ -395,8 +395,10 @@ class Frame:
 def compute_base_scopes(stack):
     scopes = [top_scope]
     for fr in stack:
-        if fr.clear_scopes:
+        if fr.clear_scopes is True:
             scopes = []
+        elif isinstance(fr.clear_scopes, int) and fr.clear_scopes > 0:
+            scopes = scopes[:-fr.clear_scopes]
         if fr.meta_scope:
             scopes.extend(fr.meta_scope.split())
         if fr.in_content and fr.meta_content_scope:
@@ -508,16 +510,12 @@ def tokenize_line(line_with_nl, stack):
             stack.append(fr)
             pushed_frames.append(fr)
 
-        added_meta = []
-        for fr in pushed_frames:
-            if fr.meta_scope:
-                for ms in fr.meta_scope.split():
-                    if ms not in match_base:
-                        added_meta.append(ms)
+        if pushed_frames:
+            match_base = compute_base_scopes(stack)
 
         rscope = rule.get("scope", "").split() if rule.get("scope") else []
         for i in range(m_start, m_end):
-            char_scopes[i] = list(match_base) + added_meta + rscope
+            char_scopes[i] = list(match_base) + rscope
 
         if "captures" in rule and isinstance(rule["captures"], dict):
             for g, cscope in rule["captures"].items():
@@ -531,7 +529,7 @@ def tokenize_line(line_with_nl, stack):
         for fr in pushed_frames:
             fr.in_content = True
 
-        if m_end == pos:
+        if m_end == pos and stack == pre_stack:
             if char_scopes[pos] is None:
                 char_scopes[pos] = compute_base_scopes(stack)
             pos += 1
