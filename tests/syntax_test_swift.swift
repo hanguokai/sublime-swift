@@ -1080,5 +1080,53 @@ func testKeyPathsAndCustomOps(_ a: Int, _ b: Int, assignment: Int, higherThan: I
 //                                                       ^^^^^^^^^^ - keyword.other.operator.precedence.swift
 }
 
+// MARK: - V3 Regressions (Module-Qualified Attributes, Typed Throws Operators & Optional/Force-Unwrapped Calls)
+@Swift.MainActor
+// <- meta.annotation.swift punctuation.definition.annotation.swift
+//^^^^ meta.annotation.swift support.other.module.swift
+//    ^ meta.annotation.swift punctuation.accessor.dot.swift
+//     ^^^^^^^^^ meta.annotation.swift variable.annotation.swift
+open class ModuleQualifiedBox {
+// <- storage.modifier.access-control.swift
+//   ^^^^^ meta.declaration.type.class.swift storage.type.class.swift
+//         ^^^^^^^^^^^^^^^^^^ meta.declaration.type.class.swift entity.name.type.class.swift
+    open @Swift.MainActor func act() throws(any Error & Sendable) {}
+//  ^^^^ storage.modifier.access-control.swift
+//       ^ meta.annotation.swift punctuation.definition.annotation.swift
+//        ^^^^^ meta.annotation.swift support.other.module.swift
+//              ^^^^^^^^^ meta.annotation.swift variable.annotation.swift
+//                        ^^^^ meta.declaration.function.swift storage.type.function.swift
+//                             ^^^ meta.declaration.function.swift entity.name.function.swift
+//                                   ^^^^^^ meta.throws.typed.swift keyword.control.exception.throws.swift
+//                                          ^^^ meta.throws.typed.swift storage.modifier.type.swift
+//                                              ^^^^^ meta.throws.typed.swift support.type.swift
+//                                                    ^ meta.throws.typed.swift keyword.operator.bitwise.swift
+//                                                      ^^^^^^^^ meta.throws.typed.swift support.type.swift
 
-
+    @Swift::MainActor
+//  ^ meta.annotation.swift punctuation.definition.annotation.swift
+//   ^^^^^ meta.annotation.swift support.other.module.swift
+//        ^^ meta.annotation.swift punctuation.accessor.module.swift
+//          ^^^^^^^^^ meta.annotation.swift variable.annotation.swift
+    func moduleSelectorAct(
+        completion: ((Int) -> Void)?,
+        callback: ((Int) -> Void)!
+    ) {
+        let value = 1, other = 2
+        completion?(value)
+//      ^^^^^^^^^^ variable.function.swift
+//                ^ keyword.operator.optional.swift
+        callback!(other)
+//      ^^^^^^^^ variable.function.swift
+//              ^ keyword.operator.logical.swift
+        let handler = (completion: completion, callback: callback)
+        handler.completion?(value)
+//              ^^^^^^^^^^ variable.function.swift
+//                        ^ keyword.operator.optional.swift
+        handler.callback!(other)
+//              ^^^^^^^^ variable.function.swift
+//                      ^ keyword.operator.logical.swift
+        self.moduleSelectorAct(completion: completion, callback: callback)
+//           ^^^^^^^^^^^^^^^^^ variable.function.swift
+    }
+}

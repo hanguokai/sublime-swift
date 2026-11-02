@@ -195,8 +195,18 @@ for vname in variables:
 
 all_defined_scopes = {top_scope}
 
+META_DIRECTIVES = ("meta_scope", "meta_content_scope", "meta_include_prototype", "clear_scopes")
+
 for ctx_name, rules in contexts.items():
+    seen_match_or_include = False
     for idx, rule in enumerate(rules):
+        for mk in META_DIRECTIVES:
+            if mk in rule and (seen_match_or_include or "match" in rule or "include" in rule):
+                errors.append(
+                    f"Context '{ctx_name}' rule #{idx+1}: '{mk}' must appear before any 'match' or 'include'"
+                )
+        if "match" in rule or "include" in rule:
+            seen_match_or_include = True
         for sk in ("scope", "meta_scope", "meta_content_scope"):
             if sk in rule and isinstance(rule[sk], str):
                 for s in rule[sk].split():
@@ -233,6 +243,9 @@ for ctx_name, rules in contexts.items():
                     errors.append(f"Context '{ctx_name}' rule #{idx+1} invalid regex '{raw_pat}': {e}")
 
 named_contexts = [c for c in contexts if not c.startswith("__anon_")]
+indent_text = open("Indentation.tmPreferences", encoding="utf-8").read()
+if r"\r" in indent_text:
+    errors.append("Indentation.tmPreferences uses '\\r' (ST normalizes line endings to '\\n'; see doc/MAINTENANCE.md 2.6)")
 print(f"[1/4] Syntax & sregex check: {len(variables)} variables, {len(named_contexts)} contexts, {len(all_defined_scopes)} unique scopes")
 
 # ------------------------------------------------------------------------------

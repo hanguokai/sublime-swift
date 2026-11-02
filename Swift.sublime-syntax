@@ -18,7 +18,7 @@ variables:
   operator_nodot_char: '[+\-*/%=<>!&|^~?¡-§©«¬®°-±¶»¿×÷‖-‗†-‧‰-‾⁁-⁓⁕-⁞←-⏿─-❵➔-⯿⸀-⹿、-〃〈-〠〰]'
   # Reserved keywords that Swift allows as argument/parameter labels (all except inout/var/let)
   label_keyword: '(?:default|case|if|else|guard|switch|where|for|in|while|repeat|break|continue|fallthrough|return|defer|do|try|catch|throw|throws|rethrows|await|import|class|struct|enum|protocol|extension|func|typealias|associatedtype|static|public|private|fileprivate|internal|open|package|operator|precedencegroup|deinit|subscript|async|nonisolated)'
-  decl_follow: '\s+(?:@{{ident_head}}{{ident_char}}*(?:\((?:[^()]|\([^)]*\))*\))?\s+|(?:(?:open|public|package|internal|fileprivate|private)(?:\s*\(\s*set\s*\))?|final|static|class|distributed|isolated|nonisolated(?:\([^)]*\))?|indirect|convenience|required|override|mutating|nonmutating|borrowing|consuming|optional|dynamic|lazy|weak|unowned(?:\([^)]*\))?|prefix|postfix|infix)\s+)*(?:import|let|var|func|macro|struct|class|enum|case|actor|protocol|extension|typealias|associatedtype|init|deinit|subscript|operator|precedencegroup)\b'
+  decl_follow: '\s+(?:@{{ident_head}}{{ident_char}}*(?:(?:\.|::){{ident_head}}{{ident_char}}*)*(?:\((?:[^()]|\([^)]*\))*\))?\s+|(?:(?:open|public|package|internal|fileprivate|private)(?:\s*\(\s*set\s*\))?|final|static|class|distributed|isolated|nonisolated(?:\([^)]*\))?|indirect|convenience|required|override|mutating|nonmutating|borrowing|consuming|optional|dynamic|lazy|weak|unowned(?:\([^)]*\))?|prefix|postfix|infix)\s+)*(?:import|let|var|func|macro|struct|class|enum|case|actor|protocol|extension|typealias|associatedtype|init|deinit|subscript|operator|precedencegroup)\b'
 
 contexts:
   main:
@@ -183,12 +183,15 @@ contexts:
         3: punctuation.section.parens.begin.swift
       push: macro-attribute-args
 
-    # General @Attribute with optional arguments
-    - match: '(@)({{ident}})'
+    # General @Attribute with optional module qualification and arguments
+    - match: '(@)(?:({{ident}})(?:(\.)|(::)))?({{ident}})'
       scope: meta.annotation.swift
       captures:
         1: punctuation.definition.annotation.swift
-        2: variable.annotation.swift
+        2: support.other.module.swift
+        3: punctuation.accessor.dot.swift
+        4: punctuation.accessor.module.swift
+        5: variable.annotation.swift
 
   availability-args:
     - meta_scope: meta.availability.swift
@@ -381,7 +384,7 @@ contexts:
 
     # Protect member access (.some, .sending, .borrowing(), .0, .`default`(), .`$raw`, etc.) and raw identifiers
     # from being misclassified as contextual keywords/modifiers or float/regex literals below (sregex-safe without lookbehinds)
-    - match: '(\.)([[:lower:]_]{{ident_char}}*|`[^`\\\n]+`)(?=\s*\()'
+    - match: '(\.)([[:lower:]_]{{ident_char}}*|`[^`\\\n]+`)(?=\s*(?:[?!]\s*)?\()'
       captures:
         1: punctuation.accessor.dot.swift
         2: variable.function.swift
@@ -408,7 +411,7 @@ contexts:
         1: variable.other.projected.swift
         2: keyword.operator.arithmetic.swift
 
-    - match: '(`[^`\\\n]+`)(?=\s*\()'
+    - match: '(`[^`\\\n]+`)(?=\s*(?:[?!]\s*)?\()'
       captures:
         1: variable.function.swift
 
@@ -546,6 +549,7 @@ contexts:
         - include: comments
         - include: declarations
         - include: types
+        - include: operators
         - include: punctuation
 
     # Untyped throws / rethrows
@@ -1030,8 +1034,8 @@ contexts:
     - match: '\b(print|debugPrint|dump|fatalError|precondition|preconditionFailure|assert|assertionFailure|abs|min|max|zip|stride|sequence|repeatElement|swap|unsafeBitCast|unsafeDowncast|numericCast|type)\b(?=\s*(?:\(|<[^>\n]+>\s*\())'
       scope: support.function.builtin.swift
 
-    # General function or method call: foo(...)
-    - match: '\b({{ident_head}}{{ident_char}}*)(?=\s*\()'
+    # General function or method call: foo(...), completion?(...), callback!(...)
+    - match: '\b(?!(?:is|as)\b(?!\s*:))({{ident_head}}{{ident_char}}*)(?=\s*(?:[?!]\s*)?\()'
       captures:
         1: variable.function.swift
 

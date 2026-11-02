@@ -51,7 +51,21 @@ sublime-swift/
 
 ---
 
-### 1.2 Supported Language Features (Swift 5.x – 6.4)
+### 1.2 Core Design Principles
+
+1. **Pragmatism & Real-World Swift First**:
+   - Swift has a rich, context-sensitive grammar that cannot be 100% disambiguated by a line-by-line regular-expression lexer alone.
+   - This package prioritizes **common, idiomatic Swift code in real-world projects**—not contrived syntactic edge cases. Always favor practical accuracy and stability on everyday code over chasing 100% theoretical corner-case coverage.
+2. **Flat, Stateless Resilience (Zero Stack Corruption)**:
+   - Declarations and expressions are matched with flat lookahead rules rather than deep `push`/`pop` parser stacks. Only strictly bounded local constructs (comments, strings/interpolations, multiline regexes, `#if` lines, `@attribute(...)` arguments, `throws(...)`, and `precedencegroup` blocks) push onto the context stack.
+   - Incomplete edits or unusual syntax on one line must never corrupt the highlighting of subsequent lines.
+3. **Keep Regexes Lean, Readable & Maintainable (Avoid Bloat)**:
+   - Sublime Text expands all `{{...}}` YAML variables inline when compiling NFA/DFA state machines. Keep variables and lookaheads short, flat, and easy to understand as the Swift language evolves.
+   - **Rule of thumb**: Never introduce sprawling multi-hundred-character lookaheads or complex variable chains just to handle rare or non-idiomatic constructs (e.g., space-separated calls to functions named after modifiers like `borrowing (value)`, standalone cross-line modifiers like `override\nfunc`, or arbitrary nested `<...>` generic call specialization vs. `<` / `>` comparison operators). If a rule disproportionately increases regex size or maintenance burden for marginal real-world benefit, omit it.
+
+---
+
+### 1.3 Supported Language Features (Swift 5.x – 6.4)
 
 | Area | Supported Syntax | Core Scopes |
 | :--- | :--- | :--- |
@@ -143,7 +157,7 @@ After any change to `Swift.sublime-syntax` or `tests/syntax_test_swift.swift`, r
 ./scripts/verify.sh
 ```
 `verify.sh` performs four deterministic checks:
-1. **Syntax Integrity & `sregex` Check**: Verifies variable expansion, context references, 0 lookbehinds (`(?<=` / `(?<!`), and 0 backreferences (`\1`..`\9`).
+1. **Syntax Integrity & `sregex` Check**: Verifies variable expansion, context references, `meta_*` / `clear_scopes` directive ordering, 0 lookbehinds (`(?<=` / `(?<!`), 0 backreferences (`\1`..`\9`), and 0 `\r` characters across syntax and preference files.
 2. **Official Swift Specification Audit**: Parses `doc/spec/SummaryOfTheGrammar.md` (all EBNF word terminals), `doc/spec/KeywordSpec.swift` (all `isLexerClassified: true` keywords), `doc/spec/TokenSpec.swift` (all `#pound` keywords), and the modern Swift 5.9–6.4 feature list to ensure none are missing in `Swift.sublime-syntax` or `tests/syntax_test_swift.swift`.
 3. **100% Scope Coverage Check**: Extracts every scope defined in `Swift.sublime-syntax` and verifies that each scope is asserted at least once in `tests/syntax_test_swift.swift`.
 4. **State-Machine Test Runner**: Simulates Sublime Text's `push`/`pop`/`include`/`meta_scope`/`meta_content_scope`/`clear_scopes` state machine across all positive and negative column assertions in `tests/syntax_test_swift.swift`.
