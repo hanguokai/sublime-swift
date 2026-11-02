@@ -11,7 +11,7 @@ scope: source.swift
 variables:
   ident_head: '[[:alpha:]_]'
   ident_char: '[[:alnum:]_]'
-  ident: '(?:{{ident_head}}{{ident_char}}*|`[^`\\\r\n]+`)'
+  ident: '(?:{{ident_head}}{{ident_char}}*|`[^`\\\n]+`)'
   type_ident: '[A-Z]{{ident_char}}*'
   operator_char: '[+\-*/%=<>!&|^~.?¡-§©«¬®°-±¶»¿×÷‖-‗†-‧‰-‾⁁-⁓⁕-⁞←-⏿─-❵➔-⯿⸀-⹿、-〃〈-〠〰]'
   # Operator characters excluding '.', which only continues dot-operators (e.g. '..<'); 'a==.none' lexes as '==' '.none'
@@ -43,11 +43,11 @@ contexts:
           scope: keyword.other.documentation.label.swift
         - match: '(?:-\s+)?\b(?:Parameter\s+{{ident_head}}{{ident_char}}*|Parameters|Returns|Throws|Precondition|Postcondition|Invariant|Complexity|Author|Authors|Copyright|Date|SeeAlso|Since|Version|Warning|Attention|Bug|Experiment|Note|Remark|Requires|Todo):'
           scope: keyword.other.documentation.tag.swift
-        - match: '\r?\n'
+        - match: '$\n?'
           pop: true
 
     # Xcode-style section markers: // MARK: ..., // TODO: ..., // FIXME: ...
-    - match: '(//)\s*((?:MARK|TODO|FIXME):[^\r\n]*)'
+    - match: '(//)\s*((?:MARK|TODO|FIXME):[^\n]*)\n?'
       scope: comment.line.double-slash.mark.swift
       captures:
         1: punctuation.definition.comment.swift
@@ -60,7 +60,7 @@ contexts:
         - meta_scope: comment.line.double-slash.swift
         - match: '\b(?:TODO|FIXME|NOTE|HACK|XXX)\b:?'
           scope: keyword.other.documentation.label.swift
-        - match: '\r?\n'
+        - match: '$\n?'
           pop: true
 
     # Empty block comment: /**/
@@ -131,7 +131,7 @@ contexts:
           scope: constant.numeric.float.decimal.swift
         - include: expressions
         - include: punctuation
-        - match: '\r?\n'
+        - match: '$\n?'
           pop: true
 
     - match: '^\s*(#(?:else|endif))\b'
@@ -248,7 +248,7 @@ contexts:
         2: punctuation.section.brackets.begin.swift
         3: punctuation.separator.comma.swift
 
-    - match: '^\s*(?!(?:case|for)\b)({{label_keyword}})(?=\s+[a-z_]{{ident_char}}*\s*:(?!:)(?![^{\r\n]*\{))|^\s*(case|for)(?=\s+{{ident}}\s*:(?!:)[^,()\[\]{};/\r\n]*[,)\]])'
+    - match: '^\s*(?!(?:case|for)\b)({{label_keyword}})(?=\s+[a-z_]{{ident_char}}*\s*:(?!:)(?![^{\n]*\{))|^\s*(case|for)(?=\s+{{ident}}\s*:(?!:)[^,()\[\]{};/\n]*[,)\]])'
 
     # Swift 6 SE-0409 Access-level import declarations
     - match: '\b(?:(public|package|internal|fileprivate|private)\s+)?(import)\b(?!\s*:)(?:\s+(typealias|struct|class|enum|protocol|let|var|func)\b)?'
@@ -381,18 +381,18 @@ contexts:
 
     # Protect member access (.some, .sending, .borrowing(), .0, .`default`(), .`$raw`, etc.) and raw identifiers
     # from being misclassified as contextual keywords/modifiers or float/regex literals below (sregex-safe without lookbehinds)
-    - match: '(\.)([[:lower:]_]{{ident_char}}*|`[^`\\\r\n]+`)(?=\s*\()'
+    - match: '(\.)([[:lower:]_]{{ident_char}}*|`[^`\\\n]+`)(?=\s*\()'
       captures:
         1: punctuation.accessor.dot.swift
         2: variable.function.swift
 
-    - match: '(\.)(`\$[^`\\\r\n]+`)(?:[ \t]*(/)(?![/*=]))?'
+    - match: '(\.)(`\$[^`\\\n]+`)(?:[ \t]*(/)(?![/*=]))?'
       captures:
         1: punctuation.accessor.dot.swift
         2: variable.other.projected.swift
         3: keyword.operator.arithmetic.swift
 
-    - match: '(\.)([[:lower:]_]{{ident_char}}*|`[^`\\\r\n]+`)(?:[ \t]*(/)(?![/*=]))?'
+    - match: '(\.)([[:lower:]_]{{ident_char}}*|`[^`\\\n]+`)(?:[ \t]*(/)(?![/*=]))?'
       captures:
         1: punctuation.accessor.dot.swift
         3: keyword.operator.arithmetic.swift
@@ -403,16 +403,16 @@ contexts:
         2: constant.numeric.integer.decimal.swift
         3: keyword.operator.arithmetic.swift
 
-    - match: '(`\$[^`\\\r\n]+`)(?:[ \t]*(/)(?![/*=]))?'
+    - match: '(`\$[^`\\\n]+`)(?:[ \t]*(/)(?![/*=]))?'
       captures:
         1: variable.other.projected.swift
         2: keyword.operator.arithmetic.swift
 
-    - match: '(`[^`\\\r\n]+`)(?=\s*\()'
+    - match: '(`[^`\\\n]+`)(?=\s*\()'
       captures:
         1: variable.function.swift
 
-    - match: '`[^`\\\r\n]+`(?:[ \t]*(/)(?![/*=]))?'
+    - match: '`[^`\\\n]+`(?:[ \t]*(/)(?![/*=]))?'
       captures:
         1: keyword.operator.arithmetic.swift
 
@@ -577,7 +577,7 @@ contexts:
       scope: keyword.control.conditional.swift
 
     # 'default:' switch label and SE-0478 file-level 'default @MainActor' ('default value:' and 'default: expr)' are labels)
-    - match: '\b(default)\b(?!\s+{{ident}}\s*:(?!:))(?!\s*:(?!:)[^,()\[\]{};/\r\n]*[,)\]])'
+    - match: '\b(default)\b(?!\s+{{ident}}\s*:(?!:))(?!\s*:(?!:)[^,()\[\]{};/\n]*[,)\]])'
       scope: keyword.control.conditional.swift
 
     # Loop keywords (exclude 'for:' / 'in:' labels and line-leading 'in context: T' parameters of multi-line signatures)
@@ -655,7 +655,7 @@ contexts:
           captures:
             1: punctuation.section.interpolation.begin.swift
           push: interpolation-body
-        - match: '\\#(?:[0\\tnr"'']|[ \t]*\r?\n|u\{[0-9a-fA-F]{1,8}\})'
+        - match: '\\#(?:[0\\tnr"'']|[ \t]*\n|u\{[0-9a-fA-F]{1,8}\})'
           scope: constant.character.escape.swift
 
     - match: '(##)(""")'
@@ -673,7 +673,7 @@ contexts:
           captures:
             1: punctuation.section.interpolation.begin.swift
           push: interpolation-body
-        - match: '\\##(?:[0\\tnr"'']|[ \t]*\r?\n|u\{[0-9a-fA-F]{1,8}\})'
+        - match: '\\##(?:[0\\tnr"'']|[ \t]*\n|u\{[0-9a-fA-F]{1,8}\})'
           scope: constant.character.escape.swift
 
     - match: '(###+)(""")'
@@ -691,7 +691,7 @@ contexts:
           captures:
             1: punctuation.section.interpolation.begin.swift
           push: interpolation-body
-        - match: '\\###+(?:[0\\tnr"'']|[ \t]*\r?\n|u\{[0-9a-fA-F]{1,8}\})'
+        - match: '\\###+(?:[0\\tnr"'']|[ \t]*\n|u\{[0-9a-fA-F]{1,8}\})'
           scope: constant.character.escape.swift
 
     # Multiline string literal: """ ... """
@@ -702,7 +702,7 @@ contexts:
         - match: '"""'
           scope: punctuation.definition.string.end.swift
           pop: true
-        - match: '\\[ \t]*\r?\n'
+        - match: '\\[ \t]*\n'
           scope: constant.character.escape.swift
         - match: '\\\('
           scope: punctuation.section.interpolation.begin.swift
@@ -728,7 +728,7 @@ contexts:
           push: interpolation-single-line-body
         - match: '\\#(?:[0\\tnr"'']|u\{[0-9a-fA-F]{1,8}\})'
           scope: constant.character.escape.swift
-        - match: '\r?\n'
+        - match: '$\n?'
           scope: invalid.illegal.unclosed-string.swift
           pop: true
 
@@ -749,7 +749,7 @@ contexts:
           push: interpolation-single-line-body
         - match: '\\##(?:[0\\tnr"'']|u\{[0-9a-fA-F]{1,8}\})'
           scope: constant.character.escape.swift
-        - match: '\r?\n'
+        - match: '$\n?'
           scope: invalid.illegal.unclosed-string.swift
           pop: true
 
@@ -770,7 +770,7 @@ contexts:
           push: interpolation-single-line-body
         - match: '\\###+(?:[0\\tnr"'']|u\{[0-9a-fA-F]{1,8}\})'
           scope: constant.character.escape.swift
-        - match: '\r?\n'
+        - match: '$\n?'
           scope: invalid.illegal.unclosed-string.swift
           pop: true
 
@@ -783,7 +783,7 @@ contexts:
           scope: punctuation.definition.string.end.swift
           pop: true
         - include: string-escaped-and-interpolated
-        - match: '\r?\n'
+        - match: '$\n?'
           scope: invalid.illegal.unclosed-string.swift
           pop: true
 
@@ -801,7 +801,7 @@ contexts:
           pop: true
         - match: '\\.'
           scope: constant.character.escape.regexp.swift
-        - match: '#(?:(?!/#)[^\r\n])*'
+        - match: '#(?:(?!/#)[^\n])*'
           scope: comment.line.number-sign.regexp.swift
 
     - match: '(#)(/)'
@@ -817,7 +817,7 @@ contexts:
           pop: true
         - match: '\\.'
           scope: constant.character.escape.regexp.swift
-        - match: '\r?\n'
+        - match: '$\n?'
           scope: invalid.illegal.unclosed-string.swift
           pop: true
 
@@ -834,7 +834,7 @@ contexts:
           pop: true
         - match: '\\.'
           scope: constant.character.escape.regexp.swift
-        - match: '#(?:(?!/##+)[^\r\n])*'
+        - match: '#(?:(?!/##+)[^\n])*'
           scope: comment.line.number-sign.regexp.swift
 
     - match: '(##+)(/)'
@@ -850,12 +850,12 @@ contexts:
           pop: true
         - match: '\\.'
           scope: constant.character.escape.regexp.swift
-        - match: '\r?\n'
+        - match: '$\n?'
           scope: invalid.illegal.unclosed-string.swift
           pop: true
 
     # Swift 5.7+ Standard Regex Literal: /.../ (SE-0354 single-line, sregex-compatible without lookbehinds)
-    - match: '(/)(?![/*=])((?:[^/\r\n\\\s]|\\.)(?:(?:[^/\r\n\\]|\\.)*(?:[^/\r\n\\\s]|\\.))?)(/)(?![/*])'
+    - match: '(/)(?![/*=])((?:[^/\n\\\s]|\\.)(?:(?:[^/\n\\]|\\.)*(?:[^/\n\\\s]|\\.))?)(/)(?![/*])'
       captures:
         1: punctuation.definition.string.begin.regexp.swift
         2: string.regexp.swift
@@ -912,7 +912,7 @@ contexts:
     - match: '\)'
       scope: punctuation.section.interpolation.end.swift
       pop: true
-    - match: '(?="#*[ \t]*(?:$|//|/\*)|\r?\n)'
+    - match: '(?="#*[ \t]*(?:$|//|/\*)|$)'
       pop: true
     - match: '\('
       scope: punctuation.section.parens.begin.swift
@@ -923,7 +923,7 @@ contexts:
     - match: '\)'
       scope: punctuation.section.parens.end.swift
       pop: true
-    - match: '(?="#*[ \t]*(?:$|//|/\*)|\r?\n)'
+    - match: '(?="#*[ \t]*(?:$|//|/\*)|$)'
       pop: true
     - match: '\('
       scope: punctuation.section.parens.begin.swift
@@ -1027,7 +1027,7 @@ contexts:
       scope: support.function.builtin.swift
 
     # Built-in global functions
-    - match: '\b(print|debugPrint|dump|fatalError|precondition|preconditionFailure|assert|assertionFailure|abs|min|max|zip|stride|sequence|repeatElement|swap|unsafeBitCast|unsafeDowncast|numericCast|type)\b(?=\s*(?:\(|<[^>\r\n]+>\s*\())'
+    - match: '\b(print|debugPrint|dump|fatalError|precondition|preconditionFailure|assert|assertionFailure|abs|min|max|zip|stride|sequence|repeatElement|swap|unsafeBitCast|unsafeDowncast|numericCast|type)\b(?=\s*(?:\(|<[^>\n]+>\s*\())'
       scope: support.function.builtin.swift
 
     # General function or method call: foo(...)

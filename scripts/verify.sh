@@ -226,6 +226,8 @@ for ctx_name, rules in contexts.items():
                         errors.append(f"Context '{ctx_name}' rule #{idx+1} uses lookbehind (incompatible with sregex): {raw_pat}")
                     if re.search(r"\\[1-9]", raw_resolved):
                         errors.append(f"Context '{ctx_name}' rule #{idx+1} uses backreference (incompatible with sregex): {raw_pat}")
+                    if re.search(r"(?<!\\)(?:\\\\)*\\r", raw_resolved):
+                        errors.append(f"Context '{ctx_name}' rule #{idx+1} uses '\\r' (ST normalizes line endings to '\\n'): {raw_pat}")
                     re.compile(resolve_vars(raw_pat, variables, for_python_re=True))
                 except Exception as e:
                     errors.append(f"Context '{ctx_name}' rule #{idx+1} invalid regex '{raw_pat}': {e}")
@@ -290,8 +292,8 @@ if os.path.isfile(os.path.join(SPEC_DIR, "SummaryOfTheGrammar.md")):
         grammar_raw = f.read()
     # Extract all formal grammar terminals **`...`**
     raw_terminals = set(re.findall(r"\*\*`([^`]+)`\*\*", grammar_raw))
-    # Ignore single-char float exponent letters and playground literal parameter labels
-    ignored_grammar_words = {"e", "E", "p", "P", "red", "green", "blue", "alpha", "resourceName"}
+    # Ignore single-char float exponent / string escape letters and playground literal parameter labels
+    ignored_grammar_words = {"e", "E", "p", "P", "r", "red", "green", "blue", "alpha", "resourceName"}
     for term in sorted(raw_terminals):
         if re.match(r"^[A-Za-z_#][A-Za-z0-9_]*$", term):
             bare = term.lstrip("#")

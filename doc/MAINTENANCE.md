@@ -69,13 +69,17 @@ sublime-swift/
 
 ## 2. `.sublime-syntax` Authoring Guidelines & Pitfalls
 
+When authoring or modifying [`Swift.sublime-syntax`](../Swift.sublime-syntax), always consult these two authoritative Sublime Text references alongside the rules below:
+- **Official `.sublime-syntax` Reference Manual**: [https://www.sublimetext.com/docs/syntax.html](https://www.sublimetext.com/docs/syntax.html) — Canonical documentation for `.sublime-syntax` YAML structure, context stack actions (`push`, `pop`, `include`), `meta_scope` / `clear_scopes` semantics, and regex engine constraints.
+- **Official SublimeHQ Built-in Syntax Packages**: [https://github.com/sublimehq/Packages](https://github.com/sublimehq/Packages) — Official reference implementations (e.g., `Rust`, `C++`, `JavaScript`) demonstrating idiomatic Sublime Text conventions, scope naming standards, and regex patterns (such as `$\n?`).
+
 Follow these core rules whenever modifying [`Swift.sublime-syntax`](../Swift.sublime-syntax):
 
 ### 2.1 Never Use Lookbehinds (`(?<=...)` or `(?<!...)`)
 - **Why**: Sublime Text 4's high-performance DFA regex engine (`sregex`) **does not support positive or negative lookbehinds**. Any rule containing `(?<=` or `(?<!` forces Sublime Text to fall back to the slower Oniguruma engine.
 - **Workaround**: Replace lookbehinds with preceding consumption rules or positive/negative lookaheads `(?=...)` / `(?!...)`:
   - In extended regex literals `#/.../#`, match `- match: '\\.'` first to consume escaped characters so the next rule can match unescaped `#` comments without `(?<!\\)#`.
-  - In single-line regex literals `/.../`, use `((?:[^/\r\n\\\s]|\\.)(?:(?:[^/\r\n\\]|\\.)*(?:[^/\r\n\\\s]|\\.))?)` to require non-whitespace at both ends without a trailing `(?<!\s)`.
+  - In single-line regex literals `/.../`, use `((?:[^/\n\\\s]|\\.)(?:(?:[^/\n\\]|\\.)*(?:[^/\n\\\s]|\\.))?)` to require non-whitespace at both ends without a trailing `(?<!\s)`.
 - **Verification**:
   1. Run `./scripts/verify.sh` (automatically scans all expanded patterns for `(?<=`, `(?<!`, and `\1`..`\9` backreferences).
   2. Open `$HOME/Library/Application Support/Sublime Text/Packages/Swift/Swift.sublime-syntax` in Sublime Text and run **`Build With: Syntax Tests - Regex Compatibility`** (`Success: all patterns ... are compatible with the new regex engine`).
@@ -88,7 +92,7 @@ Follow these core rules whenever modifying [`Swift.sublime-syntax`](../Swift.sub
 ### 2.2 Guard Contextual Keywords Against Identifier False Positives
 - **Why**: Many modern Swift keywords (`package`, `borrowing`, `consuming`, `sending`, `isolated`, `distributed`, `some`, `any`, `each`, `consume`, `copy`, `unsafe`, `borrow`, `mutate`) are contextual and frequently appear as variable names, parameter names, or member properties (e.g., `let package = 1`, `for each in items`, `worker.sending`, `worker.borrowing()`).
 - **How to guard**:
-  1. Match dot-member access `(\.)([[:lower:]_]{{ident_char}}*)` and backtick identifiers `` `[^`\\\r\n]+` `` in `declarations` *before* contextual modifiers so `worker.sending` or `worker.borrowing()` are consumed first.
+  1. Match dot-member access `(\.)([[:lower:]_]{{ident_char}}*)` and backtick identifiers `` `[^`\\\n]+` `` in `declarations` *before* contextual modifiers so `worker.sending` or `worker.borrowing()` are consumed first.
   2. Require strict lookaheads on contextual modifiers:
      - `each`: `\b(each)\b(?=\s+{{ident}})(?!\s*(?:[:=]|\b(?:in|as|is|where|else|catch)\b))` (matches `each T`, while excluding `for each in list`, `if each is Int`, etc.).
      - `package`: only highlight as an access-control modifier when followed by a declaration keyword (`struct`, `class`, `func`, `import`, `var`, `let`, `deinit`, etc.) or modifier chain (`{{decl_follow}}`), leaving `let package = 1` untouched.
@@ -101,13 +105,19 @@ Follow these core rules whenever modifying [`Swift.sublime-syntax`](../Swift.sub
 - Because `sregex` does not support backreferences (`\1`), raw strings (`#"..."#`, `##"..."##`, `###+"..."###+`) are written as explicit branches by hash count, and `./scripts/verify.sh` rejects any `\1`..`\9` backreferences.
 
 ### 2.5 Never Place Variable-Length Captures Directly Before Negative Lookaheads; Match Keyword Labels by Leading Delimiters
-- **Pitfall**: Adding a negative lookahead directly after `({{ident}})` (such as `\b(enum)\s+({{ident}})(?!\s*:\s*[^{};\r\n]*\))`) allows the regex engine to backtrack and shorten `{{ident}}` by one character so the lookahead succeeds (highlighting `enum Kind: String // (a, b)` as `Kin`).
+- **Pitfall**: Adding a negative lookahead directly after `({{ident}})` (such as `\b(enum)\s+({{ident}})(?!\s*:\s*[^{};\n]*\))`) allows the regex engine to backtrack and shorten `{{ident}}` by one character so the lookahead succeeds (highlighting `enum Kind: String // (a, b)` as `Kin`).
 - **Rules**:
   1. Never place a negative lookahead directly after a variable-length capture like `({{ident}})` unless the lookahead starts with `\b` or a disjoint character class.
   2. Keywords used as argument/parameter labels (`f(default: 1)`, `dict[k, default: 0]`, `func f(in ctx: C, class k: Int)`) are handled at the top of `declarations` by consuming the leading `(`, `[`, or `,` before `{{label_keyword}}`. Do not attach line-end `)` heuristics to keywords like `case`, `where`, `default`, or `each`.
   3. Known limitation: In multiline parameter lists, a line-leading `class k: Int` or `for item: T` cannot be distinguished from a declaration or statement without lookbehinds (except `in` and `default`, since `in x:` and `default x:` are never valid statements).
 
-### 2.6 Preserve Sublime Text 3 (`>=3092`) Compatibility
+### 2.6 Line Endings: Use `\n` and `$\n?` (Never `\r` or `\r\n`)
+- **Why**: Sublime Text normalizes all line endings to `\n` when loading files and always matches patterns line by line. Handling `\r` or `\r\n` in syntax regexes is redundant.
+- **Rules**:
+  1. Use `\n` (never `\r\n` or `\r?\n`) in character classes and escaped-newline patterns (e.g., `` `[^`\\\n]+` ``, `\\[ \t]*\n`).
+  2. Use `$\n?` (rather than `\n` or `\r?\n`) when popping single-line contexts at end-of-line (`//`, `///`, `#if`, and unclosed single-line strings/regexes). `$\n?` consumes the trailing newline when present, while still popping cleanly at EOF if the final line has no trailing newline.
+
+### 2.7 Preserve Sublime Text 3 (`>=3092`) Compatibility
 - Do not add `version: 2` or ST4-only YAML directives (`branch_point`, `branch`, `fail`, `embed`, `escape`, `extends`, `set`, or integer `pop: N`) unless creating a dedicated ST4-only release branch. Keeping the syntax free of ST4-only directives allows the same file to run on both Sublime Text 3 (`>=3092`) and Sublime Text 4 (`sregex`).
 
 ---
