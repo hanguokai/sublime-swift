@@ -355,7 +355,7 @@ contexts:
       scope: storage.type.function.swift
 
     # Initializer & Deinitializer & Subscript declarations
-    - match: '\b(init)(\?|!)?(?=\s*[<(])'
+    - match: '\b(init)(?:(\?|!)?(?=\s*[<(])|(?=\s*\{))'
       scope: meta.declaration.function.init.swift
       captures:
         1: storage.type.function.init.swift
@@ -622,7 +622,7 @@ contexts:
     - match: '\b(set|willSet|didSet)\b(?=\s*(?:\(\s*{{ident}}\s*\)\s*\{|[{}]|\b(?:get|borrow|mutate|yielding|borrowing|consuming|mutating|nonmutating)\b))'
       scope: keyword.other.accessor.swift
 
-    - match: '\b(accesses|initializes)\b(?=\s*\()'
+    - match: '\b(accesses|initializes)\b(?=\s*:)'
       scope: keyword.other.accessor.swift
 
   # ============================================================================

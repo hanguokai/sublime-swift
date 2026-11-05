@@ -288,6 +288,8 @@ if os.path.isfile(os.path.join(SPEC_DIR, "KeywordSpec.swift")):
             continue
         if not re.search(r'(?<![A-Za-z0-9_])' + re.escape(kw) + r'(?![A-Za-z0-9_])', syntax_raw):
             errors.append(f"Lexer-classified keyword '{kw}' from KeywordSpec.swift missing in {SYNTAX_FILE}")
+        if not re.search(r'(?<![A-Za-z0-9_])' + re.escape(kw) + r'(?![A-Za-z0-9_])', test_raw):
+            errors.append(f"Lexer-classified keyword '{kw}' from KeywordSpec.swift not tested in {TEST_FILE}")
 
 if os.path.isfile(os.path.join(SPEC_DIR, "TokenSpec.swift")):
     with open(os.path.join(SPEC_DIR, "TokenSpec.swift"), "r", encoding="utf-8") as f:
@@ -298,6 +300,8 @@ if os.path.isfile(os.path.join(SPEC_DIR, "TokenSpec.swift")):
     for pkw in pound_kws:
         if not re.search(r'(?<![A-Za-z0-9_])' + re.escape(pkw) + r'(?![A-Za-z0-9_])', syntax_raw):
             errors.append(f"Pound keyword '#{pkw}' from TokenSpec.swift missing in {SYNTAX_FILE}")
+        if not re.search(r'#' + re.escape(pkw) + r'(?![A-Za-z0-9_])', test_raw):
+            errors.append(f"Pound keyword '#{pkw}' from TokenSpec.swift not tested in {TEST_FILE}")
 
 grammar_word_terminals = set()
 if os.path.isfile(os.path.join(SPEC_DIR, "SummaryOfTheGrammar.md")):
@@ -628,6 +632,32 @@ for idx, line in enumerate(test_lines):
         last_code_line = line
 
 print(f"[4/4] State-machine test runner: {assertion_line_count} assertions ({assertion_count} column checks) verified across {len(test_lines)} lines")
+
+# Optional: if swiftc (>= 6.4) is available, verify test code parses cleanly as valid Swift 6
+import shutil
+import subprocess
+
+swiftc_bin = shutil.which("swiftc")
+if swiftc_bin:
+    ver_proc = subprocess.run([swiftc_bin, "--version"], text=True, capture_output=True)
+    m_ver = re.search(r"Swift version (\d+)\.(\d+)", ver_proc.stdout)
+    if m_ver and (int(m_ver.group(1)), int(m_ver.group(2))) >= (6, 4):
+        parse_lines = []
+        for l in test_lines:
+            if re.match(r"^\s*//\s*(?:<-|\^+)\s*", l) or l.startswith("let unclosed"):
+                parse_lines.append("")
+            else:
+                parse_lines.append(l)
+        parse_proc = subprocess.run(
+            [swiftc_bin, "-parse", "-swift-version", "6", "-enable-experimental-feature", "CoroutineAccessors", "-"],
+            input="\n".join(parse_lines) + "\n",
+            text=True,
+            capture_output=True,
+        )
+        if parse_proc.returncode != 0:
+            errors.append(f"swiftc -parse failed on {TEST_FILE}:\n{parse_proc.stderr.strip()}")
+        else:
+            print(f"[swiftc] Verified {TEST_FILE} parses with 0 syntax errors (Swift {m_ver.group(1)}.{m_ver.group(2)})")
 
 if errors:
     print(f"\nFAILED with {len(errors)} error(s):", file=sys.stderr)

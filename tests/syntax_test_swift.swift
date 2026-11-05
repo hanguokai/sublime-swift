@@ -72,11 +72,14 @@ struct PlatformConfig {
 //             ^^^^ variable.language.swift
     }
 }
-#elseif canImport(UIKit) || compiler(>=6.0) || hasFeature(StrictMemorySafety)
+#elseif canImport(UIKit) || compiler(>=6.0) || swift(>=6.0) || targetEnvironment(simulator) || hasFeature(StrictMemorySafety)
 // ^^^^ keyword.control.directive.conditional.swift
 //      ^^^^^^^^^ support.function.directive.swift
 //                          ^^^^^^^^ support.function.directive.swift
-//                                             ^^^^^^^^^^ support.function.directive.swift
+//                                             ^^^^^ support.function.directive.swift
+//                                                             ^^^^^^^^^^^^^^^^^ support.function.directive.swift
+//                                                                               ^^^^^^^^^ support.constant.directive.swift
+//                                                                                             ^^^^^^^^^^ support.function.directive.swift
 #else
 // <- keyword.control.directive.conditional.swift
 #sourceLocation(file: "Generated.swift", line: 10)
@@ -104,6 +107,14 @@ public macro stringify<T>(_ value: T) -> (T, String) = #externalMacro(module: "M
 //                ^^^^^ support.constant.attribute.macro.swift
 //                       ^^^^^ support.constant.attribute.macro.swift
 //                                    ^^^^^^^^^ support.constant.attribute.macro.swift
+@attached(peer, names: overloaded, prefixed(_), suffixed(Impl))
+//        ^^^^ support.constant.attribute.macro.swift
+//                     ^^^^^^^^^^ support.constant.attribute.macro.swift
+//                                 ^^^^^^^^ support.constant.attribute.macro.swift
+//                                              ^^^^^^^^ support.constant.attribute.macro.swift
+@attached(extension, conformances: Sendable)
+//        ^^^^^^^^^ support.constant.attribute.macro.swift
+//                   ^^^^^^^^^^^^ support.constant.attribute.macro.swift
 public macro AddInit() = #externalMacro(module: "Macros", type: "AddInitMacro")
 
 // MARK: - Declarations (Protocol, Class, Enum, Extension, Typealias, Operator)
@@ -236,12 +247,22 @@ precedencegroup ExponentiationPrecedence {
 //              ^^^^^^^^^^^^^^^^^^^^^^^^ meta.declaration.precedencegroup.swift entity.name.type.precedencegroup.swift
     higherThan: MultiplicationPrecedence
 //  ^^^^^^^^^^ keyword.other.operator.precedence.swift
+    lowerThan: BitwiseShiftPrecedence
+//  ^^^^^^^^^ keyword.other.operator.precedence.swift
     associativity: right
 //  ^^^^^^^^^^^^^ keyword.other.operator.precedence.swift
 //                 ^^^^^ constant.language.precedence.swift
     assignment: false
 //  ^^^^^^^^^^ keyword.other.operator.precedence.swift
 //              ^^^^^ constant.language.boolean.swift
+}
+precedencegroup ChainPrecedence {
+    associativity: left
+//                 ^^^^ constant.language.precedence.swift
+}
+precedencegroup NonAssociativePrecedence {
+    associativity: none
+//                 ^^^^ constant.language.precedence.swift
 }
 infix operator **: ExponentiationPrecedence
 // ^^ storage.modifier.swift
@@ -280,15 +301,27 @@ package struct UniqueResource<T: ~Copyable>: ~Copyable, Sendable {
     }
 
     var computed: Int {
-        init(initialValue) initializes(handle) accesses(observed) {
-//                         ^^^^^^^^^^^ keyword.other.accessor.swift
-//                                             ^^^^^^^^ keyword.other.accessor.swift
-            handle = initialValue
+        @storageRestrictions(initializes: handle, accesses: observed)
+//      ^ meta.annotation.swift punctuation.definition.annotation.swift
+//       ^^^^^^^^^^^^^^^^^^^ meta.annotation.swift variable.annotation.swift
+//                           ^^^^^^^^^^^ keyword.other.accessor.swift
+//                                                ^^^^^^^^ keyword.other.accessor.swift
+        init(initialValue) {
+//      ^^^^ meta.declaration.function.init.swift storage.type.function.init.swift
+            handle = initialValue + observed
         }
         get { handle }
 //      ^^^ keyword.other.accessor.swift
         set { handle = newValue }
 //      ^^^ keyword.other.accessor.swift
+    }
+
+    var shorthandComputed: Int {
+        @storageRestrictions(initializes: handle)
+        init { handle = newValue }
+//      ^^^^ meta.declaration.function.init.swift storage.type.function.init.swift
+        get { handle }
+        set { handle = newValue }
     }
 
     public init(_ initial: consuming T) {
@@ -392,6 +425,11 @@ func pairUp<each T, each U>(
 }
 
 // MARK: - Control Flow, Error Handling, Closures & Operators
+func runRethrowing(_ body: () throws -> Int) rethrows -> Int {
+//                                           ^^^^^^^^ keyword.control.exception.throws.swift
+    return try body()
+}
+
 func testControlFlowAndOperators(input: inout Int?) throws -> Int {
 //                                      ^^^^^ storage.modifier.ownership.swift
 //                                                  ^^^^^^ keyword.control.exception.throws.swift
@@ -566,25 +604,55 @@ func testLiterals() {
         """#
 //      ^^^ punctuation.definition.string.end.swift
 //         ^ punctuation.definition.string.end.raw.swift
+    let rawMulti2 = ##"""
+//                  ^^ punctuation.definition.string.begin.raw.swift
+//                    ^^^ punctuation.definition.string.begin.swift
+        Raw2 \##n \##(oct)
+//           ^^^^ constant.character.escape.swift
+//                ^^^^ meta.interpolation.swift punctuation.section.interpolation.begin.swift - string
+        """##
+//      ^^^ punctuation.definition.string.end.swift
+//         ^^ punctuation.definition.string.end.raw.swift
+    let rawMulti3 = ###"""
+//                  ^^^ punctuation.definition.string.begin.raw.swift
+//                     ^^^ punctuation.definition.string.begin.swift
+        Raw3 \###n \###(oct)
+//           ^^^^^ constant.character.escape.swift
+//                 ^^^^^ meta.interpolation.swift punctuation.section.interpolation.begin.swift - string
+        """###
+//      ^^^ punctuation.definition.string.end.swift
+//         ^^^ punctuation.definition.string.end.raw.swift
 
     let rx1 = /[a-zA-Z_][a-zA-Z0-9_]*/
 //            ^ punctuation.definition.string.begin.regexp.swift
 //             ^^^^^^^^^^^^^^^^^^^^^^ string.regexp.swift
 //                                   ^ punctuation.definition.string.end.regexp.swift
     let rx2 = #/\d{4}-\d{2}-\d{2}/#
-//            ^^^^^^^^^^^^^^^^^^^^^ string.regexp.extended.swift
+//            ^ punctuation.definition.string.begin.raw.swift
+//             ^ punctuation.definition.string.begin.regexp.swift
+//              ^^^^^^^^^^^^^^^^^ string.regexp.extended.swift
 //              ^^ constant.character.escape.regexp.swift
+//                               ^ punctuation.definition.string.end.regexp.swift
+//                                ^ punctuation.definition.string.end.raw.swift
     let rx3 = #/#[0-9a-f]{6}/#
 //            ^^^^^^^^^^^^^^^^ string.regexp.extended.swift - comment
-//                          ^^ punctuation.definition.string
+//                          ^ punctuation.definition.string.end.regexp.swift
+//                           ^ punctuation.definition.string.end.raw.swift
     let rx4 = #/
+//            ^ punctuation.definition.string.begin.raw.swift
+//             ^ punctuation.definition.string.begin.regexp.swift
         \d{4} # year comment
 //      ^^ constant.character.escape.regexp.swift
 //            ^^^^^^^^^^^^^^ comment.line.number-sign.regexp.swift
     /#
-//  ^^ punctuation.definition.string
+//  ^ punctuation.definition.string.end.regexp.swift
+//   ^ punctuation.definition.string.end.raw.swift
     let rx5 = ##/\d+/#still_regex/##
-//            ^^^^^^^^^^^^^^^^^^^^^^ string.regexp.extended.swift - comment
+//            ^^ punctuation.definition.string.begin.raw.swift
+//              ^ punctuation.definition.string.begin.regexp.swift
+//               ^^^^^^^^^^^^^^^^ string.regexp.extended.swift - comment
+//                               ^ punctuation.definition.string.end.regexp.swift
+//                                ^^ punctuation.definition.string.end.raw.swift
 
     let div1 = bin/2 + oct/4 + (bin + 1)/2 + [1, 2][0]/2
 //                ^ keyword.operator.arithmetic.swift - string.regexp
@@ -620,6 +688,19 @@ func testLiterals() {
 //           ^^^^^^^^ support.function.magic.swift
     let sel = #selector(BaseController.viewDidLoad)
 //            ^^^^^^^^^ support.function.magic.swift
+    let selGet = #selector(getter: BaseController.tag)
+//               ^^^^^^^^^ support.function.magic.swift
+    let selSet = #selector(setter: BaseController.tag)
+//               ^^^^^^^^^ support.function.magic.swift
+    let literals = (
+        #colorLiteral(red: 1.0, green: 0.5, blue: 0.0, alpha: 1.0),
+//      ^^^^^^^^^^^^^ support.function.magic.swift
+        #fileLiteral(resourceName: "config.json"),
+//      ^^^^^^^^^^^^ support.function.magic.swift
+        #imageLiteral(resourceName: "icon.png")
+//      ^^^^^^^^^^^^^ support.function.magic.swift
+    )
+    _ = (selGet, selSet, literals)
 
     #expect(bin == 165)
 //  ^ meta.macro.expansion.swift punctuation.definition.macro.swift
@@ -713,15 +794,28 @@ func testContextualKeywords() {
 }
 
 struct StorageView {
+    var stored: Int = 0
     var item: Int {
-        yielding borrow {
-//      ^^^^^^^^ storage.modifier.ownership.swift
-//               ^^^^^^ keyword.other.accessor.swift
-            yield 0
-//          ^^^^^ keyword.control.flow.swift
+        borrow {
+//      ^^^^^^ keyword.other.accessor.swift
+            return stored
         }
         mutate {
 //      ^^^^^^ keyword.other.accessor.swift
+            return &stored
+        }
+    }
+    var coroutineItem: Int {
+        yielding borrow {
+//      ^^^^^^^^ storage.modifier.ownership.swift
+//               ^^^^^^ keyword.other.accessor.swift
+            yield stored
+//          ^^^^^ keyword.control.flow.swift
+        }
+        yielding mutate {
+//      ^^^^^^^^ storage.modifier.ownership.swift
+//               ^^^^^^ keyword.other.accessor.swift
+            yield &stored
         }
     }
 }
@@ -748,16 +842,22 @@ import Synchronization
 // <- meta.import.swift keyword.control.import.swift
 //     ^^^^^^^^^^^^^^^ support.type.user-defined.swift
 
-@available(anyAppleOS 26.0, iOS 18.2.1, introduced: 18.0, deprecated, noasync, *)
+@available(anyAppleOS 26.0, iOS 18.2.1, *)
 // ^^^^^^^ meta.annotation.swift variable.annotation.swift
 //         ^^^^^^^^^^ meta.availability.swift support.constant.directive.swift
 //                    ^^^^ constant.numeric.float.decimal.swift
 //                          ^^^ support.constant.directive.swift
 //                              ^^^^^^ constant.numeric.float.decimal.swift
-//                                      ^^^^^^^^^^ support.constant.attribute.availability.swift
-//                                                        ^^^^^^^^^^ support.constant.attribute.availability.swift
-//                                                                    ^^^^^^^ support.constant.attribute.availability.swift
-//                                                                             ^ meta.availability.swift constant.language.wildcard.swift - keyword.operator.arithmetic.swift
+//                                      ^ meta.availability.swift constant.language.wildcard.swift - keyword.operator.arithmetic.swift
+@available(iOS, introduced: 18.0, deprecated, obsoleted: 26.0, message: "Legacy", renamed: "NewToken")
+//              ^^^^^^^^^^ support.constant.attribute.availability.swift
+//                                ^^^^^^^^^^ support.constant.attribute.availability.swift
+//                                            ^^^^^^^^^ support.constant.attribute.availability.swift
+//                                                             ^^^^^^^ support.constant.attribute.availability.swift
+//                                                                                ^^^^^^^ support.constant.attribute.availability.swift
+@available(*, noasync)
+//         ^ meta.availability.swift constant.language.wildcard.swift
+//            ^^^^^^^ support.constant.attribute.availability.swift
 public class NonSendableToken: ~Sendable {
 //           ^^^^^^^^^^^^^^^^ entity.name.type.class.swift
 //                             ^ meta.generic-constraint.suppressed.swift keyword.operator.tilde.suppressed.swift
@@ -882,7 +982,7 @@ public struct FixedBuffer<let N: Int>: ~Copyable {
         let borrowing = Optional(1)
         guard let borrowing else { return }
 //                ^^^^^^^^^ - storage.modifier
-        if case let consuming = borrowing where consuming > 0 {
+        if case let consuming = borrowing, consuming > 0 {
 //                  ^^^^^^^^^ - storage.modifier
             _ = consuming
         }
@@ -975,8 +1075,10 @@ func testKeywordLabels(default: Int, case c: Int, class k: Int, in y: Int) -> In
 //      ^^^ - keyword.other.accessor.swift
     if async < get && get > 0 && (1...5 ~= async) {
 //           ^ keyword.operator.comparison.swift
+//             ^^^ - keyword.other.accessor.swift
 //                        ^ keyword.operator.comparison.swift
 //                                      ^^ keyword.operator.comparison.swift
+//                                         ^^^^^ - storage.modifier.async.swift
         _ = (nestedDict, nestedSet, shifted, √4.0, 1 <=> 2)
 //                                           ^ keyword.operator.custom.swift
 //                                                   ^^^ keyword.operator.custom.swift
@@ -1009,15 +1111,18 @@ func testLabelHeuristicRegressions(value: Int, opt: Int?) {
 
 func allEqual<each T: Equatable>(_ lhs: repeat each T, _ rhs: repeat each T) -> Bool { true }
 //            ^^^^ keyword.operator.pack.swift
-func pair<T>(_ a: T) -> T where T: Hashable, T.Element == (Int, Int)
-//                        ^^^^^ keyword.control.conditional.swift
+func pair<T: Collection>(_ a: T) -> T where T: Hashable, T.Element == (Int, Int)
+//                                    ^^^^^ keyword.control.conditional.swift
+{ a }
 
 enum Kind: String // values (a, b)
 //   ^^^^ entity.name.type.enum.swift
 //       ^ - entity.name
+{ case a, b }
 protocol Store: AnyObject where Item == (Int, Int)
 //       ^^^^^ entity.name.type.protocol.swift
 //            ^ - entity.name
+{ associatedtype Item }
 
 func labelKeywords(class key: Int, struct item: Int, in context: Int, default value: Int) {}
 //                 ^^^^^^^^^ - storage - entity.name
@@ -1090,11 +1195,11 @@ open class ModuleQualifiedBox {
 // <- storage.modifier.access-control.swift
 //   ^^^^^ meta.declaration.type.class.swift storage.type.class.swift
 //         ^^^^^^^^^^^^^^^^^^ meta.declaration.type.class.swift entity.name.type.class.swift
-    open @Swift.MainActor func act() throws(any Error & Sendable) {}
-//  ^^^^ storage.modifier.access-control.swift
-//       ^ meta.annotation.swift punctuation.definition.annotation.swift
-//        ^^^^^ meta.annotation.swift support.other.module.swift
-//              ^^^^^^^^^ meta.annotation.swift variable.annotation.swift
+    @Swift.MainActor open func act() throws(any Error & Sendable) {}
+//  ^ meta.annotation.swift punctuation.definition.annotation.swift
+//   ^^^^^ meta.annotation.swift support.other.module.swift
+//         ^^^^^^^^^ meta.annotation.swift variable.annotation.swift
+//                   ^^^^ storage.modifier.access-control.swift
 //                        ^^^^ meta.declaration.function.swift storage.type.function.swift
 //                             ^^^ meta.declaration.function.swift entity.name.function.swift
 //                                   ^^^^^^ meta.throws.typed.swift keyword.control.exception.throws.swift
