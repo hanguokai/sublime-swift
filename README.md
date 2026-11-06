@@ -25,29 +25,37 @@ Built from the ground up against the official Swift language grammar and lexical
 
 ## Local Development & Testing
 
-1. **Clone and link the repository into Sublime Text (macOS)**:
-   ```bash
-   git clone https://github.com/hanguokai/sublime-swift.git
-   cd sublime-swift
-   ./scripts/install_macos.sh
-   ```
-   *(If `Swift` is already installed via Package Control, linking `Packages/Swift` overrides the packaged version during development.)*
+### 1. Clone and link the repository into Sublime Text (macOS)
 
-2. **Run the command-line verification suite**:
-   ```bash
-   ./scripts/verify.sh
-   ```
+```bash
+git clone https://github.com/hanguokai/sublime-swift.git
+cd sublime-swift
+./scripts/install_macos.sh
+```
 
-3. **Run Sublime Text's built-in syntax tests**:
-   Open the target file via the `Packages/Swift` symlink path (required by Sublime Text's test runner when the repository folder is not named `Swift`) and run the corresponding build target from the Command Palette (`Cmd+Shift+P`):
-   - **Scope Assertions (`Build With: Syntax Tests`)** — open `tests/syntax_test_swift.swift` to verify all scope assertions in the test suite:
-     ```bash
-     subl "$HOME/Library/Application Support/Sublime Text/Packages/Swift/tests/syntax_test_swift.swift"
-     ```
-   - **Regex Engine Compatibility (`Build With: Syntax Tests - Regex Compatibility`)** — open `Swift.sublime-syntax` to verify 100% native `sregex` engine compatibility:
-     ```bash
-     subl "$HOME/Library/Application Support/Sublime Text/Packages/Swift/Swift.sublime-syntax"
-     ```
+*(If `Swift` is already installed via Package Control, linking `Packages/Swift` overrides the packaged version during development.)*
+
+### 2. Run the command-line verification suite
+
+```bash
+./scripts/verify.sh
+```
+
+### 3. Run Sublime Text's built-in syntax tests
+
+Open the target file via the `Packages/Swift` symlink path (required by Sublime Text's test runner when the repository folder is not named `Swift`) and run the corresponding build target from the Command Palette (`Cmd+Shift+P`):
+
+**Scope Assertions (`Build With: Syntax Tests`)** — open `tests/syntax_test_swift.swift` to verify all scope assertions in the test suite:
+
+```bash
+subl "$HOME/Library/Application Support/Sublime Text/Packages/Swift/tests/syntax_test_swift.swift"
+```
+
+**Regex Engine Compatibility (`Build With: Syntax Tests - Regex Compatibility`)** — open `Swift.sublime-syntax` to verify 100% native `sregex` engine compatibility:
+
+```bash
+subl "$HOME/Library/Application Support/Sublime Text/Packages/Swift/Swift.sublime-syntax"
+```
 
 ---
 
