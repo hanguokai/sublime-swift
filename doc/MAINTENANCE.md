@@ -26,6 +26,7 @@ sublime-swift/
 │   └── verify.sh                      # Deterministic local verification suite (sregex check + spec audit + 100% scope coverage + state-machine runner)
 ├── doc/
 │   ├── MAINTENANCE.md                 # This maintenance guide (excluded from release archives via .gitattributes)
+│   ├── SourceKit-LSP.md               # User guide for pairing this package with LSP & Apple's sourcekit-lsp
 │   └── spec/                          # Local mirror of official Swift language reference, EBNF grammar, compiler token tables & CHANGELOG
 │       ├── SummaryOfTheGrammar.md     # Full official EBNF grammar extracted from the 8 ReferenceManual chapters
 │       ├── LexicalStructure.md        # Official lexical structure spec (identifiers, literals, operators, escapes)

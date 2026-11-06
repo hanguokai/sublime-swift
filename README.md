@@ -23,6 +23,14 @@ Built from the ground up against the official Swift language grammar and lexical
 
 ---
 
+## IDE Integration & Semantic Highlighting (SourceKit-LSP)
+
+This **`Swift`** package works out of the box with Sublime Text's [**`LSP`**](https://packagecontrol.io/packages/LSP) plugin (and [**`LSP-SourceKit`**](https://packagecontrol.io/packages/LSP-SourceKit)) to connect to Apple's official [**`sourcekit-lsp`**](https://github.com/swiftlang/sourcekit-lsp) for **LSP Semantic Highlighting**, code completion, DocC hover documentation, and jump-to-definition.
+
+For a complete beginner-friendly setup guide, performance tips, and SwiftPM project configuration, see **[Using SourceKit-LSP with Swift for Sublime Text](https://github.com/hanguokai/sublime-swift/blob/main/doc/SourceKit-LSP.md)**.
+
+---
+
 ## Local Development & Testing
 
 ### 1. Clone and link the repository into Sublime Text (macOS)
