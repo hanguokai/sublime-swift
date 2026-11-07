@@ -224,3 +224,18 @@ Because `"tags": true` is configured for `>=3092`, new releases are published au
    ```bash
    git archive --format=tar HEAD | tar -t
    ```
+
+### Package Control `README.md` Markdown Guidelines
+
+[`README.md`](../README.md) is rendered both on GitHub and on [packagecontrol.io/packages/Swift](https://packagecontrol.io/packages/Swift), which uses a legacy Python-Markdown parser that differs from GitHub Flavored Markdown (CommonMark). Follow these rules whenever editing [`README.md`](../README.md):
+
+1. **Avoid Nested Bold + Inline Code Inside Links or Paragraphs**:
+   - Do **not** combine bold `**` and backticks `` ` `` inside links (such as `` [**`LSP`**](url) ``) or place multiple `` **`code`** `` spans on the same line. Package Control's parser mispairs `**` across inline code spans and breaks subsequent links on that line.
+   - Use simple, single-layer formatting instead: `[LSP](url)`, `` [`Swift`](url) ``, `**bold**`, or `` `code` ``.
+2. **Use Headings and Top-Level Code Blocks Instead of Nested Lists**:
+   - Package Control's `fenced_code` parser does not reliably render ```` ``` ```` code blocks indented inside list items (`1.` / `-`), and requires strict 4-space multiples for sublists.
+   - Use `###` subheadings and top-level (unindented, column 0) fenced code blocks with blank lines before and after.
+3. **Use Full GitHub URLs for Repository Links**:
+   - When linking from [`README.md`](../README.md) to files or branches in this repository (e.g., `doc/SourceKit-LSP.md` or the `st2` branch), always use full `https://github.com/hanguokai/sublime-swift/...` URLs so links work on `packagecontrol.io` as well as on GitHub.
+4. **Doc-Only Updates Do Not Require a New Tag**:
+   - Package Control fetches `README.md` from the default branch (`main`), while Git tags control `.sublime-package` client downloads. Pushing documentation-only commits to `main` updates the Package Control web page without triggering a redundant package download for existing users.
