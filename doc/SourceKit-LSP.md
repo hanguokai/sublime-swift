@@ -33,9 +33,9 @@ Because the **`Swift`** package already highlights Swift 5.x–6.4 syntax compre
 
 | Dimension | `Swift` Package Only | `Swift` + `LSP` (`sourcekit-lsp`) |
 | :--- | :--- | :--- |
-| **How It Works** | Built-in syntax highlighting inside Sublime Text | Background `sourcekit-lsp` compiler service |
-| **Startup Speed** | **Instant** | Seconds (waits for project build graph & indexing) |
-| **Memory Usage** | **~0 MB** | **200 MB – 600 MB** (small/medium projects), **1 GB – 2 GB+** (large projects) |
+| **How It Works** | Built-in syntax highlighting inside Sublime Text | Background `sourcekit-lsp` + `SourceKitService` compiler processes |
+| **Startup Speed** | **Instant** | Seconds (loads SDK modules & project build graph) |
+| **Memory Usage** | **~0 MB** | **~150 MB** (single files), **300 MB – 1 GB+** (indexed projects) |
 | **CPU & Battery Impact** | **None** | Active during file edits and background module indexing |
 
 ### Conclusion & Recommended Best Practice
