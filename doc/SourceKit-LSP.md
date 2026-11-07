@@ -4,7 +4,7 @@ This guide explains how to pair the **`Swift`** syntax highlighting package with
 
 ---
 
-## 1. Syntax Highlighting vs. LSP: Do You Need It?
+## Syntax Highlighting vs. LSP: Do You Need It?
 
 Before installing a language server, it helps to understand how **Syntax Highlighting** (provided by this **`Swift`** package) and **Language Server Protocol (LSP)** features work together, and when you actually need LSP.
 
@@ -46,7 +46,9 @@ Because the **`Swift`** package already highlights Swift 5.x–6.4 syntax compre
 
 ---
 
-## 2. Step 1: Verify `sourcekit-lsp` on Your System
+## Installation & Setup
+
+### Step 1: Verify `sourcekit-lsp` on Your System
 
 [**`sourcekit-lsp`**](https://github.com/swiftlang/sourcekit-lsp) is bundled directly with Apple's official Swift toolchains. You do **not** need to build or download it separately:
 
@@ -62,13 +64,11 @@ swift --version
 
 If it prints a path such as `/Library/Developer/CommandLineTools/usr/bin/sourcekit-lsp` or `/Applications/Xcode.app/.../usr/bin/sourcekit-lsp`, your system is ready.
 
----
-
-## 3. Step 2: Configure Sublime Text
+### Step 2: Configure Sublime Text
 
 Once the **`Swift`** package is installed, you can connect Sublime Text 4 to `sourcekit-lsp` using either **Option A** (with the `LSP-SourceKit` helper package) or **Option B** (using `LSP` directly without extra packages).
 
-### Option A: `Swift` + `LSP` + `LSP-SourceKit` (Standard Helper Package)
+#### Option A: `Swift` + `LSP` + `LSP-SourceKit` (Standard Helper Package)
 
 1. Open the Command Palette (`Cmd+Shift+P` on macOS, `Ctrl+Shift+P` on Linux/Windows) and select **`Package Control: Install Package`**.
 2. Install [**`LSP`**](https://packagecontrol.io/packages/LSP) and [**`LSP-SourceKit`**](https://packagecontrol.io/packages/LSP-SourceKit) (alongside **`Swift`**).
@@ -83,7 +83,7 @@ Once the **`Swift`** package is installed, you can connect Sublime Text 4 to `so
 }
 ```
 
-### Option B: `Swift` + `LSP` Only (Direct Configuration, No Extra Helper Package)
+#### Option B: `Swift` + `LSP` Only (Direct Configuration, No Extra Helper Package)
 
 `LSP-SourceKit` is only a thin configuration wrapper. If you prefer not to install an extra package, you can configure `sourcekit-lsp` directly inside **`LSP`**:
 
@@ -105,11 +105,9 @@ Once the **`Swift`** package is installed, you can connect Sublime Text 4 to `so
 
 Then enable it for your current project via **`LSP: Enable Language Server in Project`** → **`sourcekit-lsp`** (or set `"enabled": true` above to keep it always on).
 
----
+### Step 3: Enable Semantic Highlighting & Verify
 
-## 4. Step 3: Enable Semantic Highlighting & Verify
-
-### 1. Turn On Semantic Highlighting in `LSP`
+**1. Turn On Semantic Highlighting in `LSP`**
 
 Sublime Text's `LSP` package disables semantic highlighting by default. To enable it, open **`Preferences: LSP Settings`** from the Command Palette and add:
 
@@ -119,7 +117,7 @@ Sublime Text's `LSP` package disables semantic highlighting by default. To enabl
 }
 ```
 
-### 2. Color Scheme Compatibility
+**2. Color Scheme Compatibility**
 
 - **Built-in Color Schemes** (*Mariana*, *Monokai*, *Breakers*, *Sixteen*): `LSP` automatically injects the required semantic token rule—no extra setup needed.
 - **Custom / Third-Party Color Schemes**: If semantic tokens do not appear in your custom theme, open the Command Palette, run **`UI: Customize Color Scheme`**, and add this rule to the right-hand pane:
@@ -137,17 +135,17 @@ Sublime Text's `LSP` package disables semantic highlighting by default. To enabl
 
 > **Tip**: If you use a custom `.sourcekit-lsp/config.json` file, keep `"reportSyntacticHighlightInSemanticTokens"` at its default (`false`) so `sourcekit-lsp` only highlights semantic identifiers without overriding the **`Swift`** package's keyword colors and bold/italic font styles.
 
-### 3. Quick Verification Checklist
+**3. Quick Verification Checklist**
 
 Open any `.swift` file in an active project to confirm everything is working:
 
-1. **Status Bar**: Check the bottom-left status bar in Sublime Text—it should display **`LSP: SourceKit`** (Option A) or **`sourcekit-lsp`** (Option B).
-2. **Hover Popup**: Hover your mouse over any variable, function, or standard library type (such as `String` or `Task`) to see its inferred type signature and documentation popup.
-3. **Jump to Definition**: Right-click a symbol and select **`LSP: Goto Definition`** (or press `F12`) to jump directly to its declaration.
+- **Status Bar**: Check the bottom-left status bar in Sublime Text—it should display **`LSP: SourceKit`** (Option A) or **`sourcekit-lsp`** (Option B).
+- **Hover Popup**: Hover your mouse over any variable, function, or standard library type (such as `String` or `Task`) to see its inferred type signature and documentation popup.
+- **Jump to Definition**: Right-click a symbol and select **`LSP: Goto Definition`** (or press `F12`) to jump directly to its declaration.
 
 ---
 
-## 5. Project Setup: Cross-File & Cross-Module Resolution
+## Project Setup: Cross-File & Cross-Module Resolution
 
 Unlike syntax highlighting—which only looks at the text of the current file—`sourcekit-lsp` runs the Swift compiler in the background. To resolve types across multiple `.swift` files, find third-party dependencies, or know which platform SDK (e.g., macOS vs. iOS `UIKit`) to target, `sourcekit-lsp` needs to understand your project's structure:
 
