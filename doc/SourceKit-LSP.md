@@ -35,7 +35,7 @@ Because the **`Swift`** package already highlights Swift 5.x–6.4 syntax compre
 | :--- | :--- | :--- |
 | **How It Works** | Built-in syntax highlighting inside Sublime Text | Background `sourcekit-lsp` + `SourceKitService` compiler processes |
 | **Startup Speed** | **Instant** | Seconds (loads SDK modules & project build graph) |
-| **Memory Usage** | **~0 MB** | **~150 MB** (single files), **300 MB – 1 GB+** (indexed projects) |
+| **Memory Usage** | **~0 MB** | **~150–200 MB** steady state on small projects (may briefly spike to **~1 GB** during initial indexing); higher on large projects |
 | **CPU & Battery Impact** | **None** | Active during file edits and background module indexing |
 
 ### Conclusion & Recommended Best Practice
@@ -133,8 +133,6 @@ Sublime Text's `LSP` package disables semantic highlighting by default. To enabl
 }
 ```
 
-> **Tip**: If you use a custom `.sourcekit-lsp/config.json` file, keep `"reportSyntacticHighlightInSemanticTokens"` at its default (`false`) so `sourcekit-lsp` only highlights semantic identifiers without overriding the **`Swift`** package's keyword colors and bold/italic font styles.
-
 **3. Quick Verification Checklist**
 
 Open any `.swift` file in an active project to confirm everything is working:
@@ -153,18 +151,29 @@ Unlike syntax highlighting—which only looks at the text of the current file—
 
 - **What works**: Single-file type checking, semantic highlighting, hover documentation, and completions for declarations inside the same file and standard library modules (such as `Foundation`).
 - **Limitation**: Without a project manifest, `sourcekit-lsp` does not know that `FileA.swift` and `FileB.swift` belong to the same module, so cross-file references will not resolve.
+- **Tip for Custom / Script-Built Projects**: If your project keeps its `.swift` files in a custom directory (such as `src/`) and builds via shell scripts, you do not need to change your build scripts—simply drop a minimal `Package.swift` in the project root pointing `path` to your source directory so `sourcekit-lsp` links all files together:
+
+```swift
+// swift-tools-version: 6.0
+import PackageDescription
+
+let package = Package(
+    name: "MyApp",
+    platforms: [.macOS(.v14)],
+    targets: [
+        .executableTarget(
+            name: "MyApp",
+            path: "src"
+        )
+    ]
+)
+```
 
 ### 2. Swift Package Manager Projects (`Package.swift`) — Native Support
 
 - `sourcekit-lsp` has built-in, first-class support for **SwiftPM** projects.
 - Simply open the folder containing `Package.swift` in Sublime Text (**`File > Open Folder...`**).
-- **Cross-Module Indexing**: On older toolchains (or if cross-module symbols have not been indexed yet), run `swift build` once in your project directory so `sourcekit-lsp` can read the module index store. In **Swift 6.0+**, you can also enable automatic background indexing by creating `~/.sourcekit-lsp/config.json` (or `.sourcekit-lsp/config.json` in your project root):
-
-```json
-{
-    "backgroundIndexing": true
-}
-```
+- **Cross-Module Indexing**: On **Swift 6.1+** toolchains, `sourcekit-lsp` automatically indexes your project in the background. On older toolchains (or if cross-module symbols have not been indexed yet), run `swift build` once in your project directory so `sourcekit-lsp` can read the module index store.
 
 ### 3. Xcode Projects (`.xcodeproj` / `.xcworkspace`)
 
